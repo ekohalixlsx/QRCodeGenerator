@@ -73,6 +73,28 @@ class App(_BaseWindow):
         )
         subtitle.pack(side=tk.LEFT, padx=(14, 0), pady=(6, 0))
 
+        right_header = tk.Frame(header, bg=self._colors["header_bg"])
+        right_header.pack(side=tk.RIGHT)
+        about_btn = tk.Label(
+            right_header,
+            text="Hakkında",
+            bg=self._colors["header_bg"],
+            fg=self._colors["sub_fg"],
+            cursor="hand2",
+            font=("Segoe UI", 10, "underline"),
+        )
+        about_btn.pack(side=tk.RIGHT, padx=(10, 0), pady=(6, 0))
+        about_btn.bind("<Button-1>", lambda _e: self.show_about())
+
+        dev = tk.Label(
+            right_header,
+            text="Developer İlyas YEŞİL",
+            bg=self._colors["header_bg"],
+            fg=self._colors["sub_fg"],
+            font=("Segoe UI", 10),
+        )
+        dev.pack(side=tk.RIGHT, pady=(6, 0))
+
         content = ttk.Frame(root, padding=12)
         content.pack(fill=tk.BOTH, expand=True)
 
@@ -98,6 +120,37 @@ class App(_BaseWindow):
         self._build_preview(right)
 
         self._refresh_labels()
+
+    def show_about(self) -> None:
+        w = tk.Toplevel(self)
+        w.title("Hakkında")
+        w.resizable(False, False)
+        try:
+            w.transient(self)
+            w.grab_set()
+        except Exception:
+            pass
+
+        frm = ttk.Frame(w, padding=14)
+        frm.pack(fill=tk.BOTH, expand=True)
+
+        ttk.Label(frm, text="Toplu QR Kod Etiket", font=("Segoe UI", 12, "bold")).pack(anchor="w")
+        ttk.Label(frm, text="Developer: İlyas YEŞİL", foreground="#555").pack(anchor="w", pady=(4, 0))
+        ttk.Separator(frm).pack(fill=tk.X, pady=10)
+
+        text = (
+            "Bu uygulama TXT/CSV girdisinden QR etiket PDF'i üretir.\n"
+            "- Etiket PDF: her etiket 1 sayfa\n"
+            "- Liste PDF: A4 üzerinde 5 sütun x 12 satır\n\n"
+            "Telif Hakkı © 2026 İlyas YEŞİL. Tüm hakları saklıdır.\n"
+            "Bu yazılım olduğu gibi sunulur; veri kaybı vb. durumlarda sorumluluk kabul edilmez."
+        )
+        msg = ttk.Label(frm, text=text, justify="left", wraplength=420)
+        msg.pack(anchor="w")
+
+        btns = ttk.Frame(frm)
+        btns.pack(fill=tk.X, pady=(12, 0))
+        ttk.Button(btns, text="Kapat", command=w.destroy).pack(side=tk.RIGHT)
 
     def _build_input_tabs(self, parent: ttk.Frame) -> None:
         if self._use_bootstrap:
