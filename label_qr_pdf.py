@@ -1,5 +1,6 @@
 import csv
 import os
+import unicodedata
 from dataclasses import dataclass
 from io import BytesIO
 from typing import Iterable, List, Optional
@@ -53,7 +54,19 @@ def _try_register_ttf_font() -> Optional[str]:
 
 
 def _normalize_header(s: str) -> str:
-    return (s or "").strip().lower()
+    s = (s or "").strip()
+    if not s:
+        return ""
+    s = s.casefold()
+    # Normalize Turkish dotted/dotless i variants that can appear after casefold.
+    s = s.replace("ı", "i")
+    s = s.replace("i̇", "i")
+    # Remove diacritics (e.g., "ş" -> "s") so headers like "HALI ADI"/"HALI ADI" match.
+    s = unicodedata.normalize("NFKD", s)
+    s = "".join(ch for ch in s if unicodedata.category(ch) != "Mn")
+    # Normalize whitespace/underscores
+    s = " ".join(s.replace("_", " ").split())
+    return s
 
 
 def _sniff_dialect(sample: str) -> csv.Dialect:
@@ -102,13 +115,48 @@ def read_labels_from_csv(path: str, encoding: str = "utf-8") -> List[LabelRow]:
 
         rows: List[LabelRow] = []
         for d in reader:
-            cins = get_field(d, "cins", "type")
+            cins = get_field(
+                d,
+                "cins",
+                "turu",
+                "tur",
+                "type",
+                "category",
+            )
             if not cins:
                 continue
 
-            carpet_name = get_field(d, "carpet_name", "carpet name", "name")
-            carpet_name2 = get_field(d, "carpet_name2", "carpet_name_2", "slug")
-            qr_text = get_field(d, "qr_code", "qr", "qr_text")
+            carpet_name = get_field(
+                d,
+                "carpet_name",
+                "carpet name",
+                "name",
+                "hali",
+                "hali adi",
+                "hali adı",
+                "hali ismi",
+                "halı",
+                "halı adi",
+                "halı adı",
+                "halı ismi",
+            )
+            carpet_name2 = get_field(
+                d,
+                "carpet_name2",
+                "carpet_name_2",
+                "slug",
+                "kod",
+                "code",
+            )
+            qr_text = get_field(
+                d,
+                "qr_code",
+                "qr",
+                "qr_text",
+                "qr text",
+                "qr kod",
+                "qr kodu",
+            )
 
             if not carpet_name and carpet_name2:
                 carpet_name = carpet_name2.replace("-", " ")
