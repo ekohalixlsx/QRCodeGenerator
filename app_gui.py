@@ -1,11 +1,15 @@
 import os
+import sys
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from tkinter import ttk
 
 try:
-    from PIL import ImageTk
+    from PIL import Image, ImageDraw, ImageFont, ImageTk
 except Exception:  # pragma: no cover
+    Image = None
+    ImageDraw = None
+    ImageFont = None
     ImageTk = None
 
 try:
@@ -28,8 +32,10 @@ class App(_BaseWindow):
         else:
             super().__init__()
         self.title("Toplu QR Kod Etiket")
-        self.geometry("980x610")
-        self.minsize(900, 560)
+        self.geometry("1360x800")
+        self.minsize(1320, 770)
+
+        self._apply_app_icon()
 
         self._use_bootstrap = tb is not None
         self._colors = {
@@ -46,10 +52,12 @@ class App(_BaseWindow):
         self.encoding = tk.StringVar(value="utf-8")
         self.logo_path = tk.StringVar(value="")
         self.logo_scale = tk.StringVar(value="22")
+        self.list_cols = tk.StringVar(value="4")
+        self.list_rows = tk.StringVar(value="12")
 
         self._labels: list[LabelRow] = []
         self._preview_imgs: list[ImageTk.PhotoImage] = []
-        self._preview_px: int = 170
+        self._preview_h: int = 170
 
         root = ttk.Frame(self, padding=0)
         root.pack(fill=tk.BOTH, expand=True)
@@ -121,10 +129,56 @@ class App(_BaseWindow):
 
         self._refresh_labels()
 
+        try:
+            self.after_idle(lambda: self._render_preview())
+        except Exception:
+            pass
+
+    def _resource_path(self, relative_path: str) -> str:
+        base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+        return os.path.join(base_path, relative_path)
+
+    def _apply_app_icon(self) -> None:
+        try:
+            icon_path = self._resource_path("QR_icon_01.ico")
+            if os.path.exists(icon_path):
+                self.iconbitmap(icon_path)
+        except Exception:
+            pass
+
+    def _center_window(self, child: tk.Toplevel) -> None:
+        try:
+            child.update_idletasks()
+            self.update_idletasks()
+
+            w = child.winfo_width() or child.winfo_reqwidth()
+            h = child.winfo_height() or child.winfo_reqheight()
+
+            parent_x = self.winfo_rootx()
+            parent_y = self.winfo_rooty()
+            parent_w = self.winfo_width()
+            parent_h = self.winfo_height()
+
+            x = parent_x + max(0, (parent_w - w) // 2)
+            y = parent_y + max(0, (parent_h - h) // 2)
+            child.geometry(f"{w}x{h}+{x}+{y}")
+        except Exception:
+            pass
+
     def show_about(self) -> None:
         w = tk.Toplevel(self)
         w.title("Hakkında")
         w.resizable(False, False)
+        try:
+            w.withdraw()
+        except Exception:
+            pass
+        try:
+            icon_path = self._resource_path("QR_icon_01.ico")
+            if os.path.exists(icon_path):
+                w.iconbitmap(icon_path)
+        except Exception:
+            pass
         try:
             w.transient(self)
             w.grab_set()
@@ -141,16 +195,35 @@ class App(_BaseWindow):
         text = (
             "Bu uygulama TXT/CSV girdisinden QR etiket PDF'i üretir.\n"
             "- Etiket PDF: her etiket 1 sayfa\n"
-            "- Liste PDF: A4 üzerinde 5 sütun x 12 satır\n\n"
+            "- Liste PDF: A4 üzerinde 4 sütun x 12 satır\n\n"
             "Telif Hakkı © 2026 İlyas YEŞİL. Tüm hakları saklıdır.\n"
             "Bu yazılım olduğu gibi sunulur; veri kaybı vb. durumlarda sorumluluk kabul edilmez."
         )
-        msg = ttk.Label(frm, text=text, justify="left", wraplength=420)
+        msg = ttk.Label(frm, text=text, justify="left", wraplength=460)
         msg.pack(anchor="w")
 
         btns = ttk.Frame(frm)
         btns.pack(fill=tk.X, pady=(12, 0))
         ttk.Button(btns, text="Kapat", command=w.destroy).pack(side=tk.RIGHT)
+
+        def _finalize_position() -> None:
+            try:
+                w.geometry("520x320")
+                w.minsize(520, 320)
+            except Exception:
+                pass
+            self._center_window(w)
+            try:
+                w.deiconify()
+                w.lift()
+                w.focus_force()
+            except Exception:
+                pass
+
+        try:
+            w.after_idle(_finalize_position)
+        except Exception:
+            _finalize_position()
 
     def _build_input_tabs(self, parent: ttk.Frame) -> None:
         if self._use_bootstrap:
@@ -234,8 +307,16 @@ class App(_BaseWindow):
         ttk.Entry(logo2, textvariable=self.logo_scale, width=6).pack(side=tk.LEFT, padx=(8, 0))
         ttk.Label(logo2, text="(öneri: 18-26)", foreground="#666").pack(side=tk.LEFT, padx=(10, 0))
 
+        grid_cfg = ttk.Frame(box)
+        grid_cfg.grid(row=5, column=0, columnspan=3, sticky="we", pady=(10, 0))
+        ttk.Label(grid_cfg, text="Liste Dizilimi:").pack(side=tk.LEFT)
+        ttk.Label(grid_cfg, text="Sütun").pack(side=tk.LEFT, padx=(10, 0))
+        ttk.Entry(grid_cfg, textvariable=self.list_cols, width=5).pack(side=tk.LEFT, padx=(6, 0))
+        ttk.Label(grid_cfg, text="Satır").pack(side=tk.LEFT, padx=(12, 0))
+        ttk.Entry(grid_cfg, textvariable=self.list_rows, width=5).pack(side=tk.LEFT, padx=(6, 0))
+
         actions = ttk.Frame(box)
-        actions.grid(row=5, column=0, columnspan=3, sticky="we", pady=(14, 0))
+        actions.grid(row=6, column=0, columnspan=3, sticky="we", pady=(14, 0))
         actions.columnconfigure(0, weight=1)
         actions.columnconfigure(1, weight=1)
 
@@ -251,7 +332,7 @@ class App(_BaseWindow):
             ttk.Button(actions, text="Önizlemeyi Yenile", command=self._refresh_labels).grid(row=0, column=1, sticky="we", ipady=8)
 
         self.lbl_status = ttk.Label(box, text="0 kayıt", foreground="#666")
-        self.lbl_status.grid(row=6, column=0, columnspan=3, sticky="w", pady=(10, 0))
+        self.lbl_status.grid(row=7, column=0, columnspan=3, sticky="w", pady=(10, 0))
 
     def _pick_logo(self) -> None:
         p = filedialog.askopenfilename(filetypes=[("Image", "*.png *.jpg *.jpeg"), ("All", "*.*")])
@@ -265,20 +346,21 @@ class App(_BaseWindow):
         self._render_preview()
 
     def _build_preview(self, parent: ttk.Frame) -> None:
-        box = ttk.LabelFrame(parent, text="Önizleme (ilk 4 kayıt)", padding=10)
+        box = ttk.LabelFrame(parent, text="Önizleme (ilk 6 kayıt)", padding=10)
         box.grid(row=0, column=0, sticky="nsew")
         box.rowconfigure(0, weight=1)
         box.columnconfigure(0, weight=1)
 
         self.preview = ttk.Frame(box)
         self.preview.grid(row=0, column=0, sticky="nsew")
-        for i in range(2):
-            self.preview.columnconfigure(i, weight=1)
-        for i in range(2):
-            self.preview.rowconfigure(i, weight=1)
+        self.preview.columnconfigure(0, weight=1)
+        self.preview.columnconfigure(1, weight=1)
+        self.preview.rowconfigure(0, weight=1)
+        self.preview.rowconfigure(1, weight=1)
+        self.preview.rowconfigure(2, weight=1)
 
         self.preview_cards: list[ttk.Label] = []
-        for idx in range(4):
+        for idx in range(6):
             r = idx // 2
             c = idx % 2
             card = ttk.Label(self.preview, text="", anchor="center", relief="groove")
@@ -290,10 +372,14 @@ class App(_BaseWindow):
                 w = max(10, int(e.width))
                 h = max(10, int(e.height))
                 cell_w = (w - 3 * 12) // 2
-                cell_h = (h - 3 * 12) // 2
-                px = max(90, min(cell_w, cell_h) - 34)
-                if abs(px - self._preview_px) >= 8:
-                    self._preview_px = px
+                cell_h = (h - 4 * 12) // 3
+                ratio = 80 / 50
+                max_w = max(10, cell_w - 34)
+                max_h = max(10, cell_h - 34)
+                target_h = int(min(max_h, max_w / ratio))
+                target_h = max(90, target_h)
+                if abs(target_h - self._preview_h) >= 8:
+                    self._preview_h = target_h
                     self._render_preview()
             except Exception:
                 pass
@@ -374,26 +460,155 @@ class App(_BaseWindow):
                 card.config(text="", image="")
             return
 
-        sample = self._labels[:4]
-        for i in range(4):
+        def _truncate_to_width(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont, max_w: int) -> str:
+            t = (text or "").strip()
+            if not t:
+                return ""
+            if draw.textlength(t, font=font) <= max_w:
+                return t
+            while t and draw.textlength(t + "…", font=font) > max_w:
+                t = t[:-1]
+            return (t + "…") if t else ""
+
+        def _wrap_ellipsis(
+            draw: ImageDraw.ImageDraw,
+            text: str,
+            font: ImageFont.ImageFont,
+            x: int,
+            y0: int,
+            max_w: int,
+            line_gap: int,
+            max_lines: int,
+        ) -> int:
+            s = (text or "").strip()
+            if not s or max_lines <= 0:
+                return y0
+            words = s.split()
+            if not words:
+                return y0
+
+            lines_out: list[str] = []
+            current = ""
+
+            def _push_line(line: str) -> None:
+                if line.strip():
+                    lines_out.append(line.strip())
+
+            for w in words:
+                cand = (current + " " + w).strip()
+                if not current:
+                    current = w
+                    continue
+                if draw.textlength(cand, font=font) <= max_w:
+                    current = cand
+                else:
+                    _push_line(current)
+                    current = w
+                    if len(lines_out) >= max_lines:
+                        current = ""
+                        break
+
+            if current and len(lines_out) < max_lines:
+                _push_line(current)
+
+            overflow = False
+            if len(lines_out) > max_lines:
+                lines_out = lines_out[:max_lines]
+                overflow = True
+            elif len(lines_out) == max_lines:
+                # If there are still words left unrendered, mark overflow.
+                rendered = " ".join(lines_out).split()
+                overflow = len(rendered) < len(words)
+
+            if overflow and lines_out:
+                lines_out[-1] = _truncate_to_width(draw, lines_out[-1], font, max_w)
+
+            y = y0
+            for i, line in enumerate(lines_out[:max_lines]):
+                if i == max_lines - 1 and overflow:
+                    line = _truncate_to_width(draw, line, font, max_w)
+                draw.text((x, y), line, fill=(0, 0, 0), font=font)
+                y += line_gap
+            return y
+
+        def _make_label_preview(row: LabelRow, target_w: int, target_h: int) -> Image.Image:
+            label_w_mm = 80.0
+            label_h_mm = 50.0
+            qr_mm = 32.0
+            margin_mm = 5.0
+            qr_y_offset_mm = 6.0
+
+            w_px = max(220, int(target_w))
+            h_px = max(140, int(target_h))
+            img = Image.new("RGB", (w_px, h_px), (255, 255, 255))
+            dr = ImageDraw.Draw(img)
+
+            px_per_mm = w_px / label_w_mm
+            margin = int(margin_mm * px_per_mm)
+            qr_side = int(qr_mm * px_per_mm)
+            qr_side = max(int(18 * px_per_mm), min(qr_side, h_px - margin * 2))
+
+            qr_x = w_px - margin - qr_side
+            qr_y = int((margin_mm + qr_y_offset_mm) * px_per_mm)
+
+            logo = self.logo_path.get().strip() or None
+            try:
+                scale = float((self.logo_scale.get().strip() or "22")) / 100.0
+            except ValueError:
+                scale = 0.22
+
+            qr_img = _make_qr_image_with_logo(
+                qr_text=row.qr_text,
+                box_size=6,
+                border=1,
+                logo_path=logo,
+                logo_scale=scale,
+            ).resize((qr_side, qr_side))
+            img.paste(qr_img, (qr_x, qr_y))
+
+            text_x = margin
+            text_max_w = max(10, (qr_x - margin) - text_x)
+
+            try:
+                f1 = ImageFont.truetype("arial.ttf", size=max(14, int(h_px * 0.12)))
+                f2 = ImageFont.truetype("arial.ttf", size=max(12, int(h_px * 0.10)))
+                f3 = ImageFont.truetype("arial.ttf", size=max(10, int(h_px * 0.085)))
+            except Exception:
+                f1 = ImageFont.load_default()
+                f2 = ImageFont.load_default()
+                f3 = ImageFont.load_default()
+
+            text_y_top_mm = label_h_mm - margin_mm - 2.8
+            y_top_px = int((label_h_mm - text_y_top_mm) * px_per_mm)
+            dr.text((text_x, y_top_px), (row.cins or "").strip(), fill=(0, 0, 0), font=f1)
+
+            name_y_mm = text_y_top_mm - 5.6
+            name_y_px = int((label_h_mm - name_y_mm) * px_per_mm)
+            _wrap_ellipsis(dr, (row.carpet_name or "").strip().upper(), f2, text_x, name_y_px, text_max_w, int(4.4 * px_per_mm), 3)
+
+            bottom_y_mm = margin_mm + 3.5
+            bottom_y_px = int((label_h_mm - bottom_y_mm) * px_per_mm)
+            _wrap_ellipsis(dr, (row.qr_text or "").strip(), f3, text_x, bottom_y_px, text_max_w, int(3.2 * px_per_mm), 1)
+
+            dr.rectangle([0, 0, w_px - 1, h_px - 1], outline=(140, 140, 140), width=1)
+            return img
+
+        ratio = 80 / 50
+        sample = self._labels[:6]
+        for i in range(6):
             card = self.preview_cards[i]
             if i >= len(sample):
                 card.config(text="", image="")
                 continue
 
             row = sample[i]
-            logo = self.logo_path.get().strip() or None
-            try:
-                scale = float((self.logo_scale.get().strip() or "22")) / 100.0
-            except ValueError:
-                scale = 0.22
-            img = _make_qr_image_with_logo(qr_text=row.qr_text, box_size=6, border=1, logo_path=logo, logo_scale=scale)
-            px = int(self._preview_px)
-            img = img.resize((px, px))
-            photo = ImageTk.PhotoImage(img)
+            h = max(120, int(self._preview_h))
+            w = max(190, int(h * ratio))
+            label_img = _make_label_preview(row, w, h)
+            photo = ImageTk.PhotoImage(label_img)
             self._preview_imgs.append(photo)
-            card.config(image=photo, text=f"{row.cins}\n{row.carpet_name}")
-            card.configure(compound="top")
+            card.config(image=photo, text="")
+            card.configure(compound="center")
 
     def generate(self) -> None:
         out = self.output_path.get().strip()
@@ -436,7 +651,16 @@ class App(_BaseWindow):
     def generate_list_pdf(self) -> None:
         out = self.output_path.get().strip()
         if not out:
-            out = "liste.pdf"
+            mode = self._current_input_mode()
+            src = ""
+            if mode == "txt":
+                src = self.txt_path.get().strip()
+            elif mode == "csv":
+                src = self.csv_path.get().strip()
+            if src:
+                out = default_output_pdf(src)
+            else:
+                out = "etiketler.pdf"
             self.output_path.set(out)
 
         base, ext = os.path.splitext(out)
@@ -452,12 +676,21 @@ class App(_BaseWindow):
             logo_scale = 0.22
 
         try:
+            cols = int(self.list_cols.get().strip() or "5")
+            rows = int(self.list_rows.get().strip() or "12")
+            if cols <= 0 or rows <= 0:
+                raise ValueError()
+        except ValueError:
+            messagebox.showerror("Hata", "Liste dizilimi için sütun/satır pozitif sayı olmalı")
+            return
+
+        try:
             self._refresh_labels()
             labels = self._labels
             if not labels:
                 messagebox.showerror("Hata", "Dosyada etiket verisi bulunamadı")
                 return
-            generate_qr_list_pdf(labels, list_out, cols=5, rows=12, logo_path=logo, logo_scale=logo_scale)
+            generate_qr_list_pdf(labels, list_out, cols=cols, rows=rows, logo_path=logo, logo_scale=logo_scale)
         except Exception as e:
             messagebox.showerror("Hata", str(e))
             return

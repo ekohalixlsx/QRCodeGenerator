@@ -1,2 +1,2 @@
-py -m pip install -r requirements.txt
-py app_gui.py
+python -m pip install -r requirements.txt
+python app_gui.py

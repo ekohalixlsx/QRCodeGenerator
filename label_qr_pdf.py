@@ -2,11 +2,10 @@ import csv
 import os
 from dataclasses import dataclass
 from io import BytesIO
-from typing import Iterable, List, Optional, Tuple
+from typing import Iterable, List, Optional
 
 import qrcode
 from PIL import Image
-from reportlab.lib.pagesizes import landscape
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.lib.utils import ImageReader
@@ -263,7 +262,7 @@ def generate_labels_pdf(
 def generate_qr_list_pdf(
     labels: Iterable[LabelRow],
     output_pdf_path: str,
-    cols: int = 5,
+    cols: int = 4,
     rows: int = 12,
     margin_mm: float = 8.0,
     gap_mm: float = 2.0,
@@ -271,6 +270,8 @@ def generate_qr_list_pdf(
     logo_scale: float = 0.22,
 ) -> None:
     page_w, page_h = A4
+    if cols <= 0 or rows <= 0:
+        raise ValueError("cols ve rows pozitif olmalı")
     margin = margin_mm * mm
     gap = gap_mm * mm
 
@@ -279,7 +280,16 @@ def generate_qr_list_pdf(
 
     c = Canvas(output_pdf_path, pagesize=A4)
     font_name = _try_register_ttf_font() or "Helvetica"
-    c.setFont(font_name, 7)
+
+    def _truncate(text: str, max_w: float, suffix: str = "…") -> str:
+        t = (text or "").strip()
+        if not t:
+            return ""
+        if c.stringWidth(t) <= max_w:
+            return t
+        while t and c.stringWidth(t + suffix) > max_w:
+            t = t[:-1]
+        return (t + suffix) if t else ""
 
     items = list(labels)
     per_page = cols * rows
@@ -296,8 +306,13 @@ def generate_qr_list_pdf(
             x0 = margin + col * (cell_w + gap)
             y0 = page_h - margin - (r + 1) * cell_h - r * gap
 
-            qr_side = min(cell_w, cell_h) - (6 * mm)
-            qr_side = max(qr_side, 10 * mm)
+            inner = 2.0 * mm
+            c.setLineWidth(0.6)
+            c.rect(x0, y0, cell_w, cell_h)
+
+            qr_side = min(cell_h - 2 * inner, (cell_w * 0.46))
+            qr_side = max(qr_side, 12 * mm)
+            qr_side = min(qr_side, cell_w - 2 * inner)
 
             qr_img = _make_qr_image_with_logo(qr_text=row.qr_text, box_size=6, border=1, logo_path=logo_path, logo_scale=logo_scale)
             bio = BytesIO()
@@ -305,18 +320,29 @@ def generate_qr_list_pdf(
             bio.seek(0)
             qr_reader = ImageReader(bio)
 
-            qr_x = x0 + (cell_w - qr_side) / 2
-            qr_y = y0 + (cell_h - qr_side) / 2 + (2 * mm)
+            qr_x = x0 + cell_w - inner - qr_side
+            qr_y = y0 + (cell_h - qr_side) / 2
             c.drawImage(qr_reader, qr_x, qr_y, width=qr_side, height=qr_side, preserveAspectRatio=True, mask='auto')
 
-            txt = (row.qr_text or "").strip()
-            txt_w = c.stringWidth(txt)
-            max_w = cell_w - (2 * mm)
-            if txt_w > max_w:
-                while txt and c.stringWidth(txt + "…") > max_w:
-                    txt = txt[:-1]
-                txt = txt + "…"
-            c.drawCentredString(x0 + cell_w / 2, y0 + (2 * mm), txt)
+            text_x = x0 + inner
+            text_max_w = max(10, (qr_x - inner) - text_x)
+
+            c.setFont(font_name, 7)
+            c.drawString(text_x, y0 + cell_h - inner - 8, (row.cins or "").strip())
+
+            c.setFont(font_name, 6.5)
+            _wrap_text(
+                c,
+                _turkish_upper((row.carpet_name or "").strip()),
+                text_x,
+                y0 + cell_h - inner - 18,
+                text_max_w,
+                8,
+            )
+
+            c.setFont(font_name, 5.5)
+            bottom_txt = _truncate((row.qr_text or "").strip(), text_max_w)
+            c.drawString(text_x, y0 + inner + 2, bottom_txt)
 
         c.showPage()
 

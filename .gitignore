@@ -3,6 +3,9 @@
 /build/
 /__pycache__/
 *.spec
+*.log
+*.msi
+*.exe
 
 # Python
 *.pyc
