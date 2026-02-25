@@ -551,7 +551,7 @@ class App(_BaseWindow):
                 y += line_gap
             return y
 
-        def _make_label_preview(row: LabelRow, target_w: int, target_h: int) -> Image.Image:
+        def _make_label_preview(row: LabelRow, target_w: int, target_h: int, current_idx: int, total_count: int) -> Image.Image:
             label_w_mm = 80.0
             label_h_mm = 50.0
             qr_mm = 32.0
@@ -611,6 +611,11 @@ class App(_BaseWindow):
             bottom_y_px = int((label_h_mm - bottom_y_mm) * px_per_mm)
             # _wrap_ellipsis(dr, (row.qr_text or "").strip(), f3, text_x, bottom_y_px, text_max_w, int(3.2 * px_per_mm), 1)
 
+            # Numaralandırma
+            num_txt = f"{current_idx} / {total_count}"
+            num_w = dr.textlength(num_txt, font=f3)
+            dr.text((w_px - margin - num_w, h_px - margin - int(3 * px_per_mm)), num_txt, fill=(0, 0, 0), font=f3)
+
 
             dr.rectangle([0, 0, w_px - 1, h_px - 1], outline=(140, 140, 140), width=1)
             return img
@@ -626,7 +631,7 @@ class App(_BaseWindow):
             row = sample[i]
             h = max(120, int(self._preview_h))
             w = max(190, int(h * ratio))
-            label_img = _make_label_preview(row, w, h)
+            label_img = _make_label_preview(row, w, h, i + 1, len(self._labels))
             photo = ImageTk.PhotoImage(label_img)
             self._preview_imgs.append(photo)
             card.config(image=photo, text="")

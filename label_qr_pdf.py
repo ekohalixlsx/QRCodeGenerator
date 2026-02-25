@@ -278,7 +278,10 @@ def generate_labels_pdf(
     font_name = _try_register_ttf_font() or "Helvetica"
     font_name_bold = font_name
 
-    for row in labels:
+    label_list = list(labels)
+    total_count = len(label_list)
+    
+    for idx, row in enumerate(label_list, start=1):
         qr_img = _make_qr_image_with_logo(qr_text=row.qr_text, logo_path=logo_path, logo_scale=logo_scale)
         bio = BytesIO()
         qr_img.save(bio, format="PNG")
@@ -299,9 +302,8 @@ def generate_labels_pdf(
         c.setFont(font_name, 10)
         _wrap_text(c, _turkish_upper((row.carpet_name or "").strip()), text_x, text_y_top - 16, text_max_w, 12)
 
-        c.setFont(font_name, 8)
-        # row.qr_text çizimi kaldırıldı (Kullanıcı talebi)
-        # _wrap_text(c, (row.qr_text or "").strip(), text_x, margin + 10, text_max_w, 10)
+        c.setFont(font_name, 7)
+        c.drawRightString(page_w - margin, margin, f"{idx} / {total_count}")
 
 
         c.showPage()
@@ -345,11 +347,13 @@ def generate_qr_list_pdf(
     per_page = cols * rows
     page_count = (len(items) + per_page - 1) // per_page
 
+    total_count = len(items)
     for pidx in range(page_count):
         start = pidx * per_page
         chunk = items[start : start + per_page]
 
         for i, row in enumerate(chunk):
+            global_idx = start + i + 1
             r = i // cols
             col = i % cols
 
@@ -389,6 +393,9 @@ def generate_qr_list_pdf(
                 text_max_w,
                 8,
             )
+
+            c.setFont(font_name, 5)
+            c.drawRightString(x0 + cell_w - inner, y0 + inner, f"{global_idx} / {total_count}")
 
             # bottom_txt çizimi kaldırıldı (Kullanıcı talebi)
             # bottom_txt = _truncate((row.qr_text or "").strip(), text_max_w)

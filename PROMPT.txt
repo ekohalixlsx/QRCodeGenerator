@@ -40,6 +40,7 @@ Temel özellikler:
   - Sağ tarafta QR.
   - Sol tarafta metin alanı: CINS + URUN ADI (Türkçe büyük harf kuralları ile).
   - [Önemli] QR_TEXT (QR içeriği olan metin) etikette basılmaz, tasarım temiz tutulur.
+  - [Önemli] Her etiketin sağ alt köşesine "n / toplam" (etiket sırası / toplam etiket) formatında küçük bir yazı eklenir.
 - Logo seçildiyse QR kodun ortasına küçük logo basılır (yüksek hata düzeltme ile).
 
 2) Liste PDF (A4 üzerinde mini-etiketler):
