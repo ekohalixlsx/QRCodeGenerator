@@ -21,6 +21,12 @@ Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 SetupIconFile=QrCode.ico
+VersionInfoVersion={#MyAppVersion}
+VersionInfoCompany=Green Labs Technology Development Inc.
+VersionInfoDescription={#MyAppName} Setup
+VersionInfoCopyright=Copyright (C) 2026 İlyas YEŞİL
+VersionInfoProductName={#MyAppName}
+VersionInfoProductVersion={#MyAppVersion}
 
 [Languages]
 Name: "turkish"; MessagesFile: "compiler:Languages\Turkish.isl"
