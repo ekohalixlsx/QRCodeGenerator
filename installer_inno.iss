@@ -2,7 +2,7 @@
 ; Output: Setup.exe
 ; Prerequisite: Inno Setup (ISCC.exe)
 
-#define MyAppName "Toplu QR Kod Etiket"
+#define MyAppName "QR Kod Etiket"
 #define MyAppExeName "QR_Etiket_PDF.exe"
 #define MyAppVersion "1.0.0"
 #define MyAppPublisher "İlyas YEŞİL"
@@ -16,18 +16,18 @@ DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 OutputDir=installer_output
-OutputBaseFilename=Setup
+OutputBaseFilename=QR Kod Etiket
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
-SetupIconFile=QR_icon_01.ico
+SetupIconFile=QrCode.ico
 
 [Languages]
 Name: "turkish"; MessagesFile: "compiler:Languages\Turkish.isl"
 
 [Files]
 Source: "dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "QR_icon_01.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "QrCode.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"

@@ -2,9 +2,9 @@ Bu proje için ihtiyaç analizi / geliştirme prompt'u
 
 Sen deneyimli bir Python masaüstü uygulaması geliştiricisisin. Aşağıdaki uygulamayı geliştir, bakımını yap ve paketle.
 
-Uygulama adı (öneri): Toplu QR Kod Oluşturucu
+Uygulama adı: QR Kod Etiket
 Amaç:
-- TXT veya CSV dosyalarından (ya da manuel girişten) toplu şekilde QR kod üretmek.
+- TXT veya CSV dosyalarından (ya da manuel girişten) QR kod üretmek.
 - Üretilen QR kodları ve ilgili metinleri 80mm x 50mm etiket şablonunda PDF olarak kaydetmek.
 - Aynı etiketleri A4 sayfa üzerinde çoklu dizilim (liste PDF) olarak üretmek.
 - Kullanıcı, PDF'leri etiketi basan bilgisayarda açıp yazdırabilmelidir.
@@ -12,14 +12,14 @@ Amaç:
 Girdi formatları:
 1) TXT:
 - Her satır 1 kayıt.
-- Format: CINS:carpet-name-slug
+- Format: CINS:urun01-name-slug
 - CINS kısmı etikette üstte başlık olarak yazılır.
 - carpet-name-slug kısmı halı ismi olarak etikete yazılır ("-" karakterleri boşluk olur).
 - QR içeriği tüm satırdır (CINS:slug).
 
 2) CSV:
-- Başlıklar esnek olmalıdır (cins, carpet_name, carpet_name2/slug, qr_text/qr gibi alternatifler desteklenir).
-- QR metni yoksa CINS + slug/carpet_name alanlarından üretilir.
+- Başlıklar esnek olmalıdır (cins, carpet_name, carpet_name2/slug, boyut1, boyut2, adet, toplam_miktar, qr_text/qr gibi alternatifler desteklenir).
+- QR metni yoksa CINS + slug/urun01_name alanlarından üretilir.
 
 Temel özellikler:
 - GUI: tkinter + ttkbootstrap ile modern arayüz.
@@ -29,8 +29,8 @@ Temel özellikler:
   - Etiket boyutu (mm): varsayılan 80x50
   - Encoding: varsayılan utf-8
   - Logo seçimi (opsiyonel): PNG/JPG
-  - Logo boyutu (%): varsayılan 22 (öneri 18-26)
-  - Liste dizilimi: sütun/satır (varsayılan 4 x 12)
+  - Logo boyutu (%): varsayılan 20 (öneri 18-26)
+  - Liste dizilimi: sütun/satır (varsayılan 5 x 12)
 
 Çıktı türleri:
 1) Etiket PDF (tek etiket = 1 sayfa):
@@ -38,27 +38,30 @@ Temel özellikler:
 - Sayfa boyutu etiket boyutuna eşit (varsayılan 80x50mm).
 - Yerleşim:
   - Sağ tarafta QR.
-  - Sol tarafta metin alanı: CINS + HALI ADI (Türkçe büyük harf kuralları ile) + alt satırda QR metni.
+  - Sol tarafta metin alanı: CINS + URUN ADI (Türkçe büyük harf kuralları ile).
+  - [Önemli] QR_TEXT (QR içeriği olan metin) etikette basılmaz, tasarım temiz tutulur.
 - Logo seçildiyse QR kodun ortasına küçük logo basılır (yüksek hata düzeltme ile).
 
 2) Liste PDF (A4 üzerinde mini-etiketler):
-- Varsayılan A4 üzerinde 4 sütun x 12 satır.
+- Varsayılan A4 üzerinde 5 sütun x 12 satır.
 - Hücreler mini etiket gibi çizilir:
   - Hücre çerçevesi
   - Sağda QR
-  - Solda metin (CINS, halı adı, alt satır qr_text)
+  - Solda metin (CINS, halı adı)
+  - QR metni (qr_text) liste çıktısında da yer almaz.
 - Kullanıcı sütun/satır sayısını GUI'den değiştirebilir.
 
 Önizleme:
 - Performanslı bir önizleme.
 - İlk 6 kayıt 2 sütun x 3 satır düzeninde gösterilir.
 - Önizleme etiketteki 80x50 oranını korur.
-- Halı adı 3 satıra kadar yazılır; satırlar arası az boşluk vardır; taşarsa son satır "…" ile kesilir.
+- Halı adı 4 satıra kadar yazılır; satırlar arası az boşluk vardır; taşarsa son satır "…" ile kesilir.
+- QR metni önizlemede gösterilmez.
 
 Diğer:
-- "Developer İlyas YEŞİL" bilgisi görünür olmalı.
-- "Hakkında" penceresi uygulama ortasında açılmalı, telif/haklar metni içermeli.
-- Uygulama ikonunu QR_icon_01.ico kullan.
+- "Developed by İlyas YEŞİL" bilgisi görünür olmalı.
+- "Hakkında" penceresinde 5x12 liste bilgisi güncel yer almalı.
+- Uygulama ikonunu QrCode.ico kullan.
 
 Kalite beklentileri:
 - Hızlı açılış, takılmayan önizleme.
@@ -66,5 +69,5 @@ Kalite beklentileri:
 - Türkçe karakterler için büyük harf dönüşümü doğru olmalı (i/İ, ı/I).
 
 Paketleme:
-- PyInstaller ile tek dosya exe üret.
-- Kullanıcıya dağıtım için Setup.exe veya Setup.msi kurulum paketi üretilebilir (tercihen Setup.exe).
+- PyInstaller ile tek dosya exe üret (`build_exe.ps1`).
+- Inno Setup ile Setup.exe kurulum paketi üret (`build_setup_inno.ps1` ve `installer_inno.iss`).

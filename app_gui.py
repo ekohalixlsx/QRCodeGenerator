@@ -31,7 +31,7 @@ class App(_BaseWindow):
             super().__init__(themename="flatly")
         else:
             super().__init__()
-        self.title("Toplu QR Kod Etiket")
+        self.title("QR Kod Etiket")
         self.geometry("1360x800")
         self.minsize(1320, 770)
 
@@ -51,8 +51,8 @@ class App(_BaseWindow):
         self.height_mm = tk.StringVar(value="50")
         self.encoding = tk.StringVar(value="utf-8")
         self.logo_path = tk.StringVar(value="")
-        self.logo_scale = tk.StringVar(value="22")
-        self.list_cols = tk.StringVar(value="4")
+        self.logo_scale = tk.StringVar(value="20")
+        self.list_cols = tk.StringVar(value="5")
         self.list_rows = tk.StringVar(value="12")
 
         self._labels: list[LabelRow] = []
@@ -66,7 +66,7 @@ class App(_BaseWindow):
         header.pack(fill=tk.X)
         title = tk.Label(
             header,
-            text="Toplu QR Kod Oluşturucu",
+            text="QR Kod Etiket",
             bg=self._colors["header_bg"],
             fg=self._colors["header_fg"],
             font=("Segoe UI", 18, "bold"),
@@ -83,7 +83,7 @@ class App(_BaseWindow):
 
         right_header = tk.Frame(header, bg=self._colors["header_bg"])
         right_header.pack(side=tk.RIGHT)
-        about_btn = tk.Label(
+        self.about_btn = tk.Label(
             right_header,
             text="Hakkında",
             bg=self._colors["header_bg"],
@@ -91,15 +91,15 @@ class App(_BaseWindow):
             cursor="hand2",
             font=("Segoe UI", 10, "underline"),
         )
-        about_btn.pack(side=tk.RIGHT, padx=(10, 0), pady=(6, 0))
-        about_btn.bind("<Button-1>", lambda _e: self.show_about())
+        self.about_btn.pack(side=tk.RIGHT, padx=(10, 0), pady=(6, 0))
+        self.about_btn.bind("<Button-1>", lambda _e: self.show_about())
 
         dev = tk.Label(
             right_header,
-            text="Developer İlyas YEŞİL",
+            text="Developed by İlyas YEŞİL",
             bg=self._colors["header_bg"],
             fg=self._colors["sub_fg"],
-            font=("Segoe UI", 10),
+            font=("Segoe UI", 8),
         )
         dev.pack(side=tk.RIGHT, pady=(6, 0))
 
@@ -140,7 +140,7 @@ class App(_BaseWindow):
 
     def _apply_app_icon(self) -> None:
         try:
-            icon_path = self._resource_path("QR_icon_01.ico")
+            icon_path = self._resource_path("QrCode.ico")
             if os.path.exists(icon_path):
                 self.iconbitmap(icon_path)
         except Exception:
@@ -174,7 +174,7 @@ class App(_BaseWindow):
         except Exception:
             pass
         try:
-            icon_path = self._resource_path("QR_icon_01.ico")
+            icon_path = self._resource_path("QrCode.ico")
             if os.path.exists(icon_path):
                 w.iconbitmap(icon_path)
         except Exception:
@@ -188,14 +188,14 @@ class App(_BaseWindow):
         frm = ttk.Frame(w, padding=14)
         frm.pack(fill=tk.BOTH, expand=True)
 
-        ttk.Label(frm, text="Toplu QR Kod Etiket", font=("Segoe UI", 12, "bold")).pack(anchor="w")
-        ttk.Label(frm, text="Developer: İlyas YEŞİL", foreground="#555").pack(anchor="w", pady=(4, 0))
+        ttk.Label(frm, text="QR Kod Etiket", font=("Segoe UI", 12, "bold")).pack(anchor="w")
+        ttk.Label(frm, text="Developed by İlyas YEŞİL", foreground="#555").pack(anchor="w", pady=(4, 0))
         ttk.Separator(frm).pack(fill=tk.X, pady=10)
 
         text = (
             "Bu uygulama TXT/CSV girdisinden QR etiket PDF'i üretir.\n"
             "- Etiket PDF: her etiket 1 sayfa\n"
-            "- Liste PDF: A4 üzerinde 4 sütun x 12 satır\n\n"
+            "- Liste PDF: A4 üzerinde 5 sütun x 12 satır\n\n"
             "Telif Hakkı © 2026 İlyas YEŞİL. Tüm hakları saklıdır.\n"
             "Bu yazılım olduğu gibi sunulur; veri kaybı vb. durumlarda sorumluluk kabul edilmez."
         )
@@ -208,11 +208,31 @@ class App(_BaseWindow):
 
         def _finalize_position() -> None:
             try:
-                w.geometry("520x320")
-                w.minsize(520, 320)
+                # Pencere boyutu
+                win_w, win_h = 520, 320
+                w.geometry(f"{win_w}x{win_h}")
+                w.minsize(win_w, win_h)
+                
+                # Butonun ekran koordinatlarını al
+                bx = self.about_btn.winfo_rootx()
+                by = self.about_btn.winfo_rooty()
+                bw = self.about_btn.winfo_width()
+                bh = self.about_btn.winfo_height()
+                
+                # Pencerenin sağ üst köşesi butonun altına gelsin
+                # window_x + window_w = bx + bw  =>  window_x = (bx + bw) - window_w
+                # window_y = by + bh
+                x = (bx + bw) - win_w
+                y = by + bh + 5  # 5px boşluk
+                
+                # Ekran sınırlarını kontrol et (taşma olmasın)
+                screen_w = self.winfo_screenwidth()
+                if x + win_w > screen_w: x = screen_w - win_w
+                if x < 0: x = 0
+                
+                w.geometry(f"{win_w}x{win_h}+{x}+{y}")
             except Exception:
-                pass
-            self._center_window(w)
+                self._center_window(w)
             try:
                 w.deiconify()
                 w.lift()
@@ -555,7 +575,7 @@ class App(_BaseWindow):
             try:
                 scale = float((self.logo_scale.get().strip() or "22")) / 100.0
             except ValueError:
-                scale = 0.22
+                scale = 0.20
 
             qr_img = _make_qr_image_with_logo(
                 qr_text=row.qr_text,
@@ -584,11 +604,13 @@ class App(_BaseWindow):
 
             name_y_mm = text_y_top_mm - 5.6
             name_y_px = int((label_h_mm - name_y_mm) * px_per_mm)
-            _wrap_ellipsis(dr, (row.carpet_name or "").strip().upper(), f2, text_x, name_y_px, text_max_w, int(4.4 * px_per_mm), 3)
+            _wrap_ellipsis(dr, (row.carpet_name or "").strip().upper(), f2, text_x, name_y_px, text_max_w, int(4.4 * px_per_mm), 4)
+
 
             bottom_y_mm = margin_mm + 3.5
             bottom_y_px = int((label_h_mm - bottom_y_mm) * px_per_mm)
-            _wrap_ellipsis(dr, (row.qr_text or "").strip(), f3, text_x, bottom_y_px, text_max_w, int(3.2 * px_per_mm), 1)
+            # _wrap_ellipsis(dr, (row.qr_text or "").strip(), f3, text_x, bottom_y_px, text_max_w, int(3.2 * px_per_mm), 1)
+
 
             dr.rectangle([0, 0, w_px - 1, h_px - 1], outline=(140, 140, 140), width=1)
             return img
@@ -633,7 +655,7 @@ class App(_BaseWindow):
         try:
             logo_scale = float((self.logo_scale.get().strip() or "22")) / 100.0
         except ValueError:
-            logo_scale = 0.22
+            logo_scale = 0.20
 
         try:
             self._refresh_labels()
@@ -673,7 +695,7 @@ class App(_BaseWindow):
         try:
             logo_scale = float((self.logo_scale.get().strip() or "22")) / 100.0
         except ValueError:
-            logo_scale = 0.22
+            logo_scale = 0.20
 
         try:
             cols = int(self.list_cols.get().strip() or "5")

@@ -193,7 +193,7 @@ def _make_qr_image_with_logo(
     box_size: int = 8,
     border: int = 1,
     logo_path: Optional[str] = None,
-    logo_scale: float = 0.22,
+    logo_scale: float = 0.20,
 ) -> Image.Image:
     qr = qrcode.QRCode(
         version=None,
@@ -267,7 +267,7 @@ def generate_labels_pdf(
     qr_mm: float = 32.0,
     margin_mm: float = 4.0,
     logo_path: Optional[str] = None,
-    logo_scale: float = 0.22,
+    logo_scale: float = 0.20,
 ) -> None:
     page_w = width_mm * mm
     page_h = height_mm * mm
@@ -300,7 +300,9 @@ def generate_labels_pdf(
         _wrap_text(c, _turkish_upper((row.carpet_name or "").strip()), text_x, text_y_top - 16, text_max_w, 12)
 
         c.setFont(font_name, 8)
-        _wrap_text(c, (row.qr_text or "").strip(), text_x, margin + 10, text_max_w, 10)
+        # row.qr_text çizimi kaldırıldı (Kullanıcı talebi)
+        # _wrap_text(c, (row.qr_text or "").strip(), text_x, margin + 10, text_max_w, 10)
+
 
         c.showPage()
 
@@ -310,12 +312,12 @@ def generate_labels_pdf(
 def generate_qr_list_pdf(
     labels: Iterable[LabelRow],
     output_pdf_path: str,
-    cols: int = 4,
+    cols: int = 5,
     rows: int = 12,
     margin_mm: float = 8.0,
     gap_mm: float = 2.0,
     logo_path: Optional[str] = None,
-    logo_scale: float = 0.22,
+    logo_scale: float = 0.20,
 ) -> None:
     page_w, page_h = A4
     if cols <= 0 or rows <= 0:
@@ -388,9 +390,10 @@ def generate_qr_list_pdf(
                 8,
             )
 
-            c.setFont(font_name, 5.5)
-            bottom_txt = _truncate((row.qr_text or "").strip(), text_max_w)
-            c.drawString(text_x, y0 + inner + 2, bottom_txt)
+            # bottom_txt çizimi kaldırıldı (Kullanıcı talebi)
+            # bottom_txt = _truncate((row.qr_text or "").strip(), text_max_w)
+            # c.drawString(text_x, y0 + inner + 2, bottom_txt)
+
 
         c.showPage()
 
