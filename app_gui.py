@@ -613,8 +613,7 @@ class App(_BaseWindow):
 
             # Numaralandırma
             num_txt = f"{current_idx} / {total_count}"
-            num_w = dr.textlength(num_txt, font=f3)
-            dr.text((w_px - margin - num_w, h_px - margin - int(3 * px_per_mm)), num_txt, fill=(0, 0, 0), font=f3)
+            dr.text((margin, h_px - margin - int(2.5 * px_per_mm)), num_txt, fill=(0, 0, 0), font=f3)
 
 
             dr.rectangle([0, 0, w_px - 1, h_px - 1], outline=(140, 140, 140), width=1)

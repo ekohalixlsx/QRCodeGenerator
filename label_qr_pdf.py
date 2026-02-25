@@ -233,21 +233,36 @@ def _make_qr_image_with_logo(
     return img
 
 
-def _wrap_text(canvas: Canvas, text: str, x: float, y: float, max_width: float, line_height: float) -> float:
+def _wrap_text(canvas: Canvas, text: str, x: float, y: float, max_width: float, line_height: float, max_lines: int = 0) -> float:
     words = (text or "").split()
     if not words:
         return y
+    lines = []
     line = ""
     for w in words:
         candidate = (line + " " + w).strip()
         if canvas.stringWidth(candidate) <= max_width:
             line = candidate
         else:
-            canvas.drawString(x, y, line)
-            y -= line_height
+            if line: lines.append(line)
             line = w
+            if max_lines > 0 and len(lines) >= max_lines:
+                line = ""
+                break
     if line:
-        canvas.drawString(x, y, line)
+        lines.append(line)
+
+    if max_lines > 0 and len(lines) > max_lines:
+        lines = lines[:max_lines]
+        # Taşan kelime varsa son satırı kesip ... ekle (basit mantık: her zaman ekle eğer kesildiyse)
+        last = lines[-1]
+        suffix = "..."
+        while last and canvas.stringWidth(last + suffix) > max_width:
+            last = last[:-1]
+        lines[-1] = last + suffix
+
+    for ln in lines:
+        canvas.drawString(x, y, ln)
         y -= line_height
     return y
 
@@ -300,10 +315,10 @@ def generate_labels_pdf(
         c.drawString(text_x, text_y_top, (row.cins or "").strip())
 
         c.setFont(font_name, 10)
-        _wrap_text(c, _turkish_upper((row.carpet_name or "").strip()), text_x, text_y_top - 16, text_max_w, 12)
+        _wrap_text(c, _turkish_upper((row.carpet_name or "").strip()), text_x, text_y_top - 16, text_max_w, 12, max_lines=4)
 
-        c.setFont(font_name, 7)
-        c.drawRightString(page_w - margin, margin, f"{idx} / {total_count}")
+        c.setFont(font_name, 6)
+        c.drawString(margin, margin, f"{idx} / {total_count}")
 
 
         c.showPage()
@@ -392,10 +407,11 @@ def generate_qr_list_pdf(
                 y0 + cell_h - inner - 18,
                 text_max_w,
                 8,
+                max_lines=4
             )
 
-            c.setFont(font_name, 5)
-            c.drawRightString(x0 + cell_w - inner, y0 + inner, f"{global_idx} / {total_count}")
+            c.setFont(font_name, 4.5)
+            c.drawString(x0 + inner, y0 + inner, f"{global_idx} / {total_count}")
 
             # bottom_txt çizimi kaldırıldı (Kullanıcı talebi)
             # bottom_txt = _truncate((row.qr_text or "").strip(), text_max_w)
