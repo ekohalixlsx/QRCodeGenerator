@@ -195,20 +195,6 @@ class App(_BaseWindow):
             font=("Segoe UI", 8),
         )
         dev.pack(side=tk.RIGHT, pady=(6, 0))
-        self.lbl_dev_header = dev
-
-        self.btn_lang = tk.Label(
-            right_header,
-            text="EN",
-            bg=self._colors["header_bg"],
-            fg=self._colors["header_fg"],
-            cursor="hand2",
-            font=("Segoe UI", 9, "bold"),
-            padx=10
-        )
-        self.btn_lang.pack(side=tk.RIGHT, pady=(6, 0))
-        self.btn_lang.bind("<Button-1>", lambda _e: self._toggle_lang())
-
         self.lbl_title_header = title
         self.lbl_subtitle_header = subtitle
         self.btn_about_header = self.about_btn
@@ -503,19 +489,24 @@ class App(_BaseWindow):
 
         actions = ttk.Frame(box)
         actions.grid(row=6, column=0, columnspan=3, sticky="we", pady=(14, 0))
-        actions.columnconfigure(0, weight=1)
-        actions.columnconfigure(1, weight=1)
+        actions.columnconfigure(0, weight=10)
+        actions.columnconfigure(1, weight=10)
+        actions.columnconfigure(2, weight=1)
 
         if self._use_bootstrap:
             self.btn_generate = tb.Button(actions, text="QR KODLARI OLUŞTUR (PDF)", command=self.generate, bootstyle="success")
             self.btn_generate.grid(row=0, column=0, sticky="we", padx=(0, 8), ipady=8)
             self.btn_generate_list_pdf = tb.Button(actions, text="PDF Liste Olarak Kaydet", command=self.generate_list_pdf, bootstyle="primary")
-            self.btn_generate_list_pdf.grid(row=0, column=1, sticky="we", ipady=8)
+            self.btn_generate_list_pdf.grid(row=0, column=1, sticky="we", padx=(0, 8), ipady=8)
+            self.btn_lang = tb.Button(actions, text="TR / EN", command=self._toggle_lang, bootstyle="outline-secondary")
+            self.btn_lang.grid(row=0, column=2, sticky="we", ipady=8)
         else:
             self.btn_generate = ttk.Button(actions, text="PDF OLUŞTUR", command=self.generate)
             self.btn_generate.grid(row=0, column=0, sticky="we", padx=(0, 8), ipady=8)
             self.btn_generate_list_pdf = ttk.Button(actions, text="Önizlemeyi Yenile", command=self._refresh_labels)
-            self.btn_generate_list_pdf.grid(row=0, column=1, sticky="we", ipady=8)
+            self.btn_generate_list_pdf.grid(row=0, column=1, sticky="we", padx=(0, 8), ipady=8)
+            self.btn_lang = ttk.Button(actions, text="TR / EN", command=self._toggle_lang)
+            self.btn_lang.grid(row=0, column=2, sticky="we", ipady=8)
 
         self.lbl_status = ttk.Label(box, text="0 kayıt", foreground="#666")
         self.lbl_status.grid(row=7, column=0, columnspan=3, sticky="w", pady=(10, 0))
