@@ -22,6 +22,98 @@ from label_qr_pdf import read_labels_from_csv, read_labels_from_txt
 from label_qr_pdf import _make_qr_image_with_logo
 
 
+TRANSLATIONS = {
+    "tr": {
+        "app_title": "QR Kod Etiket",
+        "subtitle": "TXT / CSV -> Etiket PDF",
+        "about": "Hakkında",
+        "dev_by": "Developed by İlyas YEŞİL",
+        "tab_manual": "  Manuel Giriş  ",
+        "tab_txt": "  TXT Dosyası Yükle  ",
+        "tab_csv": "  CSV Dosyası Yükle  ",
+        "manual_example": "Örnek: HALI:buhari-bhr-03-red",
+        "txt_file_lbl": "TXT dosyası:",
+        "csv_file_lbl": "CSV dosyası:",
+        "pick": "Seç",
+        "settings": "Ayarlar",
+        "save_loc": "Kayıt Yeri (PDF):",
+        "browse": "Gözat",
+        "save": "Kaydet",
+        "label_size": "Etiket Boyutu (mm):",
+        "encoding": "Encoding:",
+        "logo_lbl": "Logo (opsiyonel):",
+        "clear": "Temizle",
+        "logo_size_pct": "Logo Boyutu (%):",
+        "logo_suggest": "(öneri: 18-26)",
+        "list_layout": "Liste Dizilimi:",
+        "cols": "Sütun",
+        "rows": "Satır",
+        "btn_generate_label": "QR KODLARI OLUŞTUR (PDF)",
+        "btn_generate_list": "PDF Liste Olarak Kaydet",
+        "status_records": "{} kayıt",
+        "preview_title": "Önizleme (ilk 6 kayıt)",
+        "about_text": (
+            "Bu uygulama TXT/CSV girdisinden QR etiket PDF'i üretir.\n"
+            "- Etiket PDF: her etiket 1 sayfa\n"
+            "- Liste PDF: A4 üzerinde 5 sütun x 12 satır\n\n"
+            "Telif Hakkı © 2026 İlyas YEŞİL. Tüm hakları saklıdır.\n"
+            "Bu yazılım olduğu gibi sunulur; veri kaybı vb. durumlarda sorumluluk kabul edilmez."
+        ),
+        "close": "Kapat",
+        "pillow_req": "Önizleme için Pillow gerekli",
+        "refresh_preview": "Önizlemeyi Yenile",
+        "error": "Hata",
+        "success": "Başarılı",
+        "pdf_create_success": "PDF başarıyla oluşturuldu.",
+        "lang_btn": "EN",
+    },
+    "en": {
+        "app_title": "QR Code Label",
+        "subtitle": "TXT / CSV -> Label PDF",
+        "about": "About",
+        "dev_by": "Developed by İlyas YEŞİL",
+        "tab_manual": "  Manual Entry  ",
+        "tab_txt": "  Load TXT File  ",
+        "tab_csv": "  Load CSV File  ",
+        "manual_example": "Example: CARPET:buhari-bhr-03-red",
+        "txt_file_lbl": "TXT file:",
+        "csv_file_lbl": "CSV file:",
+        "pick": "Pick",
+        "settings": "Settings",
+        "save_loc": "Save Location (PDF):",
+        "browse": "Browse",
+        "save": "Save",
+        "label_size": "Label Size (mm):",
+        "encoding": "Encoding:",
+        "logo_lbl": "Logo (optional):",
+        "clear": "Clear",
+        "logo_size_pct": "Logo Size (%):",
+        "logo_suggest": "(suggest: 18-26)",
+        "list_layout": "List Layout:",
+        "cols": "Cols",
+        "rows": "Rows",
+        "btn_generate_label": "GENERATE QR CODES (PDF)",
+        "btn_generate_list": "Save as PDF List",
+        "status_records": "{} records",
+        "preview_title": "Preview (first 6 records)",
+        "about_text": (
+            "This application generates QR label PDFs from TXT/CSV input.\n"
+            "- Label PDF: each label on 1 page\n"
+            "- List PDF: 5 cols x 12 rows on A4\n\n"
+            "Copyright © 2026 İlyas YEŞİL. All rights reserved.\n"
+            "This software is provided as is; no responsibility is accepted for data loss etc."
+        ),
+        "close": "Close",
+        "pillow_req": "Pillow required for preview",
+        "refresh_preview": "Refresh Preview",
+        "error": "Error",
+        "success": "Success",
+        "pdf_create_success": "PDF created successfully.",
+        "lang_btn": "TR",
+    }
+}
+
+
 _BaseWindow = tb.Window if tb is not None else tk.Tk
 
 
@@ -54,6 +146,7 @@ class App(_BaseWindow):
         self.logo_scale = tk.StringVar(value="20")
         self.list_cols = tk.StringVar(value="5")
         self.list_rows = tk.StringVar(value="12")
+        self.current_lang = "tr"
 
         self._labels: list[LabelRow] = []
         self._preview_imgs: list[ImageTk.PhotoImage] = []
@@ -102,6 +195,23 @@ class App(_BaseWindow):
             font=("Segoe UI", 8),
         )
         dev.pack(side=tk.RIGHT, pady=(6, 0))
+        self.lbl_dev_header = dev
+
+        self.btn_lang = tk.Label(
+            right_header,
+            text="EN",
+            bg=self._colors["header_bg"],
+            fg=self._colors["header_fg"],
+            cursor="hand2",
+            font=("Segoe UI", 9, "bold"),
+            padx=10
+        )
+        self.btn_lang.pack(side=tk.RIGHT, pady=(6, 0))
+        self.btn_lang.bind("<Button-1>", lambda _e: self._toggle_lang())
+
+        self.lbl_title_header = title
+        self.lbl_subtitle_header = subtitle
+        self.btn_about_header = self.about_btn
 
         content = ttk.Frame(root, padding=12)
         content.pack(fill=tk.BOTH, expand=True)
@@ -128,6 +238,7 @@ class App(_BaseWindow):
         self._build_preview(right)
 
         self._refresh_labels()
+        self._update_all_texts()
 
         try:
             self.after_idle(lambda: self._render_preview())
@@ -145,6 +256,49 @@ class App(_BaseWindow):
                 self.iconbitmap(icon_path)
         except Exception:
             pass
+
+    def _update_all_texts(self) -> None:
+        tr = TRANSLATIONS[self.current_lang]
+        self.title(tr["app_title"])
+        self.lbl_title_header.config(text=tr["app_title"])
+        self.lbl_subtitle_header.config(text=tr["subtitle"])
+        self.btn_about_header.config(text=tr["about"])
+        self.lbl_dev_header.config(text=tr["dev_by"])
+        
+        self.tabs.tab(0, text=tr["tab_manual"])
+        self.tabs.tab(1, text=tr["tab_txt"])
+        self.tabs.tab(2, text=tr["tab_csv"])
+        
+        self.lbl_manual_hint.config(text=tr["manual_example"])
+        self.lbl_txt_path.config(text=tr["txt_file_lbl"])
+        self.btn_pick_txt.config(text=tr["pick"])
+        self.lbl_csv_path.config(text=tr["csv_file_lbl"])
+        self.btn_pick_csv.config(text=tr["pick"])
+        
+        self.box_settings.config(text=tr["settings"])
+        self.lbl_save_loc.config(text=tr["save_loc"])
+        self.btn_pick_output.config(text=tr["browse"] if self._use_bootstrap else tr["save"])
+        self.lbl_label_size.config(text=tr["label_size"])
+        self.lbl_encoding.config(text=tr["encoding"])
+        self.lbl_logo_opt.config(text=tr["logo_lbl"])
+        self.btn_pick_logo.config(text=tr["pick"])
+        self.btn_clear_logo.config(text=tr["clear"])
+        self.lbl_logo_size_pct.config(text=tr["logo_size_pct"])
+        self.lbl_logo_suggest.config(text=tr["logo_suggest"])
+        self.lbl_list_layout.config(text=tr["list_layout"])
+        self.lbl_cols.config(text=tr["cols"])
+        self.lbl_rows.config(text=tr["rows"])
+        
+        self.btn_generate.config(text=tr["btn_generate_label"])
+        self.btn_generate_list_pdf.config(text=tr["btn_generate_list"])
+        self.lbl_status.config(text=tr["status_records"].format(len(self._labels)))
+        self.box_preview.config(text=tr["preview_title"])
+        self.btn_lang.config(text=tr["lang_btn"])
+
+    def _toggle_lang(self) -> None:
+        self.current_lang = "en" if self.current_lang == "tr" else "tr"
+        self._update_all_texts()
+        self._render_preview()
 
     def _center_window(self, child: tk.Toplevel) -> None:
         try:
@@ -192,19 +346,14 @@ class App(_BaseWindow):
         ttk.Label(frm, text="Developed by İlyas YEŞİL", foreground="#555").pack(anchor="w", pady=(4, 0))
         ttk.Separator(frm).pack(fill=tk.X, pady=10)
 
-        text = (
-            "Bu uygulama TXT/CSV girdisinden QR etiket PDF'i üretir.\n"
-            "- Etiket PDF: her etiket 1 sayfa\n"
-            "- Liste PDF: A4 üzerinde 5 sütun x 12 satır\n\n"
-            "Telif Hakkı © 2026 İlyas YEŞİL. Tüm hakları saklıdır.\n"
             "Bu yazılım olduğu gibi sunulur; veri kaybı vb. durumlarda sorumluluk kabul edilmez."
         )
-        msg = ttk.Label(frm, text=text, justify="left", wraplength=460)
+        msg = ttk.Label(frm, text=TRANSLATIONS[self.current_lang]["about_text"], justify="left", wraplength=460)
         msg.pack(anchor="w")
 
         btns = ttk.Frame(frm)
         btns.pack(fill=tk.X, pady=(12, 0))
-        ttk.Button(btns, text="Kapat", command=w.destroy).pack(side=tk.RIGHT)
+        ttk.Button(btns, text=TRANSLATIONS[self.current_lang]["close"], command=w.destroy).pack(side=tk.RIGHT)
 
         def _finalize_position() -> None:
             try:
@@ -262,25 +411,30 @@ class App(_BaseWindow):
 
         self.manual_text = tk.Text(tab_manual, height=8, wrap="word", font=("Segoe UI", 10))
         self.manual_text.pack(fill=tk.BOTH, expand=True)
-        ttk.Label(tab_manual, text="Örnek: HALI:buhari-bhr-03-red", foreground="#666").pack(anchor="w", pady=(6, 0))
+        self.lbl_manual_hint = ttk.Label(tab_manual, text="Örnek: HALI:buhari-bhr-03-red", foreground="#666")
+        self.lbl_manual_hint.pack(anchor="w", pady=(6, 0))
 
         row = ttk.Frame(tab_txt)
         row.pack(fill=tk.X)
-        ttk.Label(row, text="TXT dosyası:").pack(side=tk.LEFT)
+        self.lbl_txt_path = ttk.Label(row, text="TXT dosyası:")
+        self.lbl_txt_path.pack(side=tk.LEFT)
         ttk.Entry(row, textvariable=self.txt_path).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=8)
         if self._use_bootstrap:
-            tb.Button(row, text="Seç", command=self._pick_txt, bootstyle="secondary").pack(side=tk.LEFT)
+            self.btn_pick_txt = tb.Button(row, text="Seç", command=self._pick_txt, bootstyle="secondary")
         else:
-            ttk.Button(row, text="Seç", command=self._pick_txt).pack(side=tk.LEFT)
+            self.btn_pick_txt = ttk.Button(row, text="Seç", command=self._pick_txt)
+        self.btn_pick_txt.pack(side=tk.LEFT)
 
         row2 = ttk.Frame(tab_csv)
         row2.pack(fill=tk.X)
-        ttk.Label(row2, text="CSV dosyası:").pack(side=tk.LEFT)
+        self.lbl_csv_path = ttk.Label(row2, text="CSV dosyası:")
+        self.lbl_csv_path.pack(side=tk.LEFT)
         ttk.Entry(row2, textvariable=self.csv_path).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=8)
         if self._use_bootstrap:
-            tb.Button(row2, text="Seç", command=self._pick_csv, bootstyle="secondary").pack(side=tk.LEFT)
+            self.btn_pick_csv = tb.Button(row2, text="Seç", command=self._pick_csv, bootstyle="secondary")
         else:
-            ttk.Button(row2, text="Seç", command=self._pick_csv).pack(side=tk.LEFT)
+            self.btn_pick_csv = ttk.Button(row2, text="Seç", command=self._pick_csv)
+        self.btn_pick_csv.pack(side=tk.LEFT)
 
         tabs.bind("<<NotebookTabChanged>>", lambda _e: self._refresh_labels())
         self.manual_text.bind("<KeyRelease>", lambda _e: self._refresh_labels())
@@ -290,49 +444,61 @@ class App(_BaseWindow):
         box.grid(row=1, column=0, sticky="ew")
         box.columnconfigure(1, weight=1)
 
-        ttk.Label(box, text="Kayıt Yeri (PDF):").grid(row=0, column=0, sticky="w")
+        lbl_save_loc = ttk.Label(box, text="Kayıt Yeri (PDF):")
+        lbl_save_loc.grid(row=0, column=0, sticky="w")
         ttk.Entry(box, textvariable=self.output_path).grid(row=0, column=1, sticky="we", padx=(8, 0))
         if self._use_bootstrap:
-            tb.Button(box, text="Gözat", command=self._pick_output, bootstyle="secondary").grid(row=0, column=2, padx=(8, 0))
+            btn_pick_output = tb.Button(box, text="Gözat", command=self._pick_output, bootstyle="secondary")
         else:
-            ttk.Button(box, text="Kaydet", command=self._pick_output).grid(row=0, column=2, padx=(8, 0))
+            btn_pick_output = ttk.Button(box, text="Kaydet", command=self._pick_output)
+        btn_pick_output.grid(row=0, column=2, padx=(8, 0))
 
         size = ttk.Frame(box)
         size.grid(row=1, column=0, columnspan=3, sticky="we", pady=(10, 0))
-        ttk.Label(size, text="Etiket Boyutu (mm):").pack(side=tk.LEFT)
+        lbl_label_size = ttk.Label(size, text="Etiket Boyutu (mm):")
+        lbl_label_size.pack(side=tk.LEFT)
         ttk.Entry(size, textvariable=self.width_mm, width=6).pack(side=tk.LEFT, padx=(8, 0))
         ttk.Label(size, text="x").pack(side=tk.LEFT, padx=6)
         ttk.Entry(size, textvariable=self.height_mm, width=6).pack(side=tk.LEFT)
 
         enc = ttk.Frame(box)
         enc.grid(row=2, column=0, columnspan=3, sticky="we", pady=(10, 0))
-        ttk.Label(enc, text="Encoding:").pack(side=tk.LEFT)
+        lbl_encoding = ttk.Label(enc, text="Encoding:")
+        lbl_encoding.pack(side=tk.LEFT)
         ttk.Entry(enc, textvariable=self.encoding, width=12).pack(side=tk.LEFT, padx=(8, 0))
 
         logo = ttk.Frame(box)
         logo.grid(row=3, column=0, columnspan=3, sticky="we", pady=(10, 0))
         logo.columnconfigure(1, weight=1)
-        ttk.Label(logo, text="Logo (opsiyonel):").grid(row=0, column=0, sticky="w")
+        lbl_logo_opt = ttk.Label(logo, text="Logo (opsiyonel):")
+        lbl_logo_opt.grid(row=0, column=0, sticky="w")
         ttk.Entry(logo, textvariable=self.logo_path).grid(row=0, column=1, sticky="we", padx=(8, 0))
         if self._use_bootstrap:
-            tb.Button(logo, text="Seç", command=self._pick_logo, bootstyle="secondary").grid(row=0, column=2, padx=(8, 0))
-            tb.Button(logo, text="Temizle", command=self._clear_logo, bootstyle="secondary").grid(row=0, column=3, padx=(8, 0))
+            btn_pick_logo = tb.Button(logo, text="Seç", command=self._pick_logo, bootstyle="secondary")
+            btn_clear_logo = tb.Button(logo, text="Temizle", command=self._clear_logo, bootstyle="secondary")
         else:
-            ttk.Button(logo, text="Seç", command=self._pick_logo).grid(row=0, column=2, padx=(8, 0))
-            ttk.Button(logo, text="Temizle", command=self._clear_logo).grid(row=0, column=3, padx=(8, 0))
+            btn_pick_logo = ttk.Button(logo, text="Seç", command=self._pick_logo)
+            btn_clear_logo = ttk.Button(logo, text="Temizle", command=self._clear_logo)
+        btn_pick_logo.grid(row=0, column=2, padx=(8, 0))
+        btn_clear_logo.grid(row=0, column=3, padx=(8, 0))
 
         logo2 = ttk.Frame(box)
         logo2.grid(row=4, column=0, columnspan=3, sticky="we", pady=(8, 0))
-        ttk.Label(logo2, text="Logo Boyutu (%):").pack(side=tk.LEFT)
+        lbl_logo_size_pct = ttk.Label(logo2, text="Logo Boyutu (%):")
+        lbl_logo_size_pct.pack(side=tk.LEFT)
         ttk.Entry(logo2, textvariable=self.logo_scale, width=6).pack(side=tk.LEFT, padx=(8, 0))
-        ttk.Label(logo2, text="(öneri: 18-26)", foreground="#666").pack(side=tk.LEFT, padx=(10, 0))
+        lbl_logo_suggest = ttk.Label(logo2, text="(öneri: 18-26)", foreground="#666")
+        lbl_logo_suggest.pack(side=tk.LEFT, padx=(10, 0))
 
         grid_cfg = ttk.Frame(box)
         grid_cfg.grid(row=5, column=0, columnspan=3, sticky="we", pady=(10, 0))
-        ttk.Label(grid_cfg, text="Liste Dizilimi:").pack(side=tk.LEFT)
-        ttk.Label(grid_cfg, text="Sütun").pack(side=tk.LEFT, padx=(10, 0))
+        lbl_list_layout = ttk.Label(grid_cfg, text="Liste Dizilimi:")
+        lbl_list_layout.pack(side=tk.LEFT)
+        lbl_cols = ttk.Label(grid_cfg, text="Sütun")
+        lbl_cols.pack(side=tk.LEFT, padx=(10, 0))
         ttk.Entry(grid_cfg, textvariable=self.list_cols, width=5).pack(side=tk.LEFT, padx=(6, 0))
-        ttk.Label(grid_cfg, text="Satır").pack(side=tk.LEFT, padx=(12, 0))
+        lbl_rows = ttk.Label(grid_cfg, text="Satır")
+        lbl_rows.pack(side=tk.LEFT, padx=(12, 0))
         ttk.Entry(grid_cfg, textvariable=self.list_rows, width=5).pack(side=tk.LEFT, padx=(6, 0))
 
         actions = ttk.Frame(box)
@@ -343,16 +509,30 @@ class App(_BaseWindow):
         if self._use_bootstrap:
             self.btn_generate = tb.Button(actions, text="QR KODLARI OLUŞTUR (PDF)", command=self.generate, bootstyle="success")
             self.btn_generate.grid(row=0, column=0, sticky="we", padx=(0, 8), ipady=8)
-            tb.Button(actions, text="PDF Liste Olarak Kaydet", command=self.generate_list_pdf, bootstyle="primary").grid(
-                row=0, column=1, sticky="we", ipady=8
-            )
+            self.btn_generate_list_pdf = tb.Button(actions, text="PDF Liste Olarak Kaydet", command=self.generate_list_pdf, bootstyle="primary")
+            self.btn_generate_list_pdf.grid(row=0, column=1, sticky="we", ipady=8)
         else:
             self.btn_generate = ttk.Button(actions, text="PDF OLUŞTUR", command=self.generate)
             self.btn_generate.grid(row=0, column=0, sticky="we", padx=(0, 8), ipady=8)
-            ttk.Button(actions, text="Önizlemeyi Yenile", command=self._refresh_labels).grid(row=0, column=1, sticky="we", ipady=8)
+            self.btn_generate_list_pdf = ttk.Button(actions, text="Önizlemeyi Yenile", command=self._refresh_labels)
+            self.btn_generate_list_pdf.grid(row=0, column=1, sticky="we", ipady=8)
 
         self.lbl_status = ttk.Label(box, text="0 kayıt", foreground="#666")
         self.lbl_status.grid(row=7, column=0, columnspan=3, sticky="w", pady=(10, 0))
+
+        self.box_settings = box
+        self.lbl_save_loc = lbl_save_loc
+        self.btn_pick_output = btn_pick_output
+        self.lbl_label_size = lbl_label_size
+        self.lbl_encoding = lbl_encoding
+        self.lbl_logo_opt = lbl_logo_opt
+        self.btn_pick_logo = btn_pick_logo
+        self.btn_clear_logo = btn_clear_logo
+        self.lbl_logo_size_pct = lbl_logo_size_pct
+        self.lbl_logo_suggest = lbl_logo_suggest
+        self.lbl_list_layout = lbl_list_layout
+        self.lbl_cols = lbl_cols
+        self.lbl_rows = lbl_rows
 
     def _pick_logo(self) -> None:
         p = filedialog.askopenfilename(filetypes=[("Image", "*.png *.jpg *.jpeg"), ("All", "*.*")])
@@ -368,6 +548,7 @@ class App(_BaseWindow):
     def _build_preview(self, parent: ttk.Frame) -> None:
         box = ttk.LabelFrame(parent, text="Önizleme (ilk 6 kayıt)", padding=10)
         box.grid(row=0, column=0, sticky="nsew")
+        self.box_preview = box
         box.rowconfigure(0, weight=1)
         box.columnconfigure(0, weight=1)
 
@@ -462,7 +643,7 @@ class App(_BaseWindow):
                 p = self.csv_path.get().strip()
                 self._labels = read_labels_from_csv(p, encoding=enc) if p and os.path.exists(p) else []
 
-            self.lbl_status.config(text=f"{len(self._labels)} kayıt")
+            self.lbl_status.config(text=TRANSLATIONS[self.current_lang]["status_records"].format(len(self._labels)))
             self._render_preview()
         except Exception as e:
             self._labels = []
@@ -472,7 +653,7 @@ class App(_BaseWindow):
     def _render_preview(self, clear: bool = False) -> None:
         if ImageTk is None:
             for card in self.preview_cards:
-                card.config(text="Önizleme için Pillow gerekli", image="")
+                card.config(text=TRANSLATIONS[self.current_lang]["pillow_req"], image="")
             return
         self._preview_imgs = []
         if clear or not self._labels:
@@ -664,15 +845,26 @@ class App(_BaseWindow):
         try:
             self._refresh_labels()
             labels = self._labels
-            if not labels:
-                messagebox.showerror("Hata", "Dosyada etiket verisi bulunamadı")
-                return
-            generate_labels_pdf(labels, out, width_mm=w, height_mm=h, logo_path=logo, logo_scale=logo_scale)
-        except Exception as e:
-            messagebox.showerror("Hata", str(e))
+            messagebox.showerror(TRANSLATIONS[self.current_lang]["error"], TRANSLATIONS[self.current_lang]["label_size_numeric_error"])
             return
 
-        messagebox.showinfo("Tamam", f"PDF hazır:\n{out}")
+        logo = self.logo_path.get().strip() or None
+        try:
+            logo_scale = float((self.logo_scale.get().strip() or "22")) / 100.0
+        except ValueError:
+            logo_scale = 0.20
+
+        try:
+            self._refresh_labels()
+            labels = self._labels
+            if not labels:
+                messagebox.showerror(TRANSLATIONS[self.current_lang]["error"], TRANSLATIONS[self.current_lang]["no_label_data_found"])
+                return
+            generate_labels_pdf(labels, out, width_mm=w, height_mm=h, logo_path=logo, logo_scale=logo_scale)
+            messagebox.showinfo(TRANSLATIONS[self.current_lang]["success"], TRANSLATIONS[self.current_lang]["pdf_create_success"].format(out=out))
+        except Exception as e:
+            messagebox.showerror(TRANSLATIONS[self.current_lang]["error"], str(e))
+            return
 
     def generate_list_pdf(self) -> None:
         out = self.output_path.get().strip()
@@ -707,21 +899,20 @@ class App(_BaseWindow):
             if cols <= 0 or rows <= 0:
                 raise ValueError()
         except ValueError:
-            messagebox.showerror("Hata", "Liste dizilimi için sütun/satır pozitif sayı olmalı")
+            messagebox.showerror(TRANSLATIONS[self.current_lang]["error"], TRANSLATIONS[self.current_lang]["list_layout_numeric_error"])
             return
 
         try:
             self._refresh_labels()
             labels = self._labels
             if not labels:
-                messagebox.showerror("Hata", "Dosyada etiket verisi bulunamadı")
+                messagebox.showerror(TRANSLATIONS[self.current_lang]["error"], TRANSLATIONS[self.current_lang]["no_label_data_found"])
                 return
             generate_qr_list_pdf(labels, list_out, cols=cols, rows=rows, logo_path=logo, logo_scale=logo_scale)
+            messagebox.showinfo(TRANSLATIONS[self.current_lang]["success"], TRANSLATIONS[self.current_lang]["list_pdf_create_success"].format(out=list_out))
         except Exception as e:
-            messagebox.showerror("Hata", str(e))
+            messagebox.showerror(TRANSLATIONS[self.current_lang]["error"], str(e))
             return
-
-        messagebox.showinfo("Tamam", f"Liste PDF hazır:\n{list_out}")
 
 
 def main() -> None:
