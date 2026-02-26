@@ -306,18 +306,12 @@ class App(_BaseWindow):
         # Dil bilgisini değiştir
         self.current_lang = "en" if self.current_lang == "tr" else "tr"
         
-        # Mevcut tüm widgetları temizle (Pencereyi kapatmadan içeriği sıfırla)
-        for child in self.winfo_children():
-            child.destroy()
-            
-        # Arayüzü yeni dilde baştan kur
-        self._build_ui()
+        # Tüm metinleri güncelle
+        self._update_all_texts()
         
-        # Durum çubuğundaki kayıt sayısını koru
-        tr = TRANSLATIONS[self.current_lang]
-        if hasattr(self, 'lbl_status'):
-            self.lbl_status.config(text=tr["status_records"].format(len(self._labels)))
-            
+        # Layout'u sabitlemek için update
+        self.update_idletasks()
+        
         # Önizlemeyi tazele
         self._render_preview()
 
