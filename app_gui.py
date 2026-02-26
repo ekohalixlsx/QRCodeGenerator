@@ -64,7 +64,11 @@ TRANSLATIONS = {
         "refresh_preview": "Önizlemeyi Yenile",
         "error": "Hata",
         "success": "Başarılı",
-        "pdf_create_success": "PDF başarıyla oluşturuldu.",
+        "label_size_numeric_error": "Etiket ölçüsü sayı olmalı.",
+        "no_label_data_found": "Etiket verisi bulunamadı.",
+        "list_layout_numeric_error": "Liste düzeni için sütun/satır sayıları pozitif tam sayı olmalı.",
+        "pdf_create_success": "PDF başarıyla oluşturuldu: {out}",
+        "list_pdf_create_success": "Liste PDF başarıyla oluşturuldu: {out}",
         "lang_btn": "[ EN ]",
     },
     "en": {
@@ -108,7 +112,11 @@ TRANSLATIONS = {
         "refresh_preview": "Refresh Preview",
         "error": "Error",
         "success": "Success",
-        "pdf_create_success": "PDF created successfully.",
+        "label_size_numeric_error": "Label dimensions must be numeric.",
+        "no_label_data_found": "No label data found.",
+        "list_layout_numeric_error": "Columns/rows must be positive integers for list layout.",
+        "pdf_create_success": "PDF created successfully: {out}",
+        "list_pdf_create_success": "List PDF created successfully: {out}",
         "lang_btn": "[ TR ]",
     }
 }
@@ -210,6 +218,7 @@ class App(_BaseWindow):
         self.lbl_title_header = title
         self.lbl_subtitle_header = subtitle
         self.btn_about_header = self.about_btn
+        self.lbl_dev_header = dev
 
         content = ttk.Frame(root, padding=12)
         content.pack(fill=tk.BOTH, expand=True)
@@ -318,8 +327,9 @@ class App(_BaseWindow):
             pass
 
     def show_about(self) -> None:
+        tr = TRANSLATIONS[self.current_lang]
         w = tk.Toplevel(self)
-        w.title("Hakkında")
+        w.title(tr["about"])
         w.resizable(False, False)
         try:
             w.withdraw()
@@ -340,18 +350,16 @@ class App(_BaseWindow):
         frm = ttk.Frame(w, padding=14)
         frm.pack(fill=tk.BOTH, expand=True)
 
-        ttk.Label(frm, text="QR Kod Etiket", font=("Segoe UI", 12, "bold")).pack(anchor="w")
-        ttk.Label(frm, text="Developed by İlyas YEŞİL", foreground="#555").pack(anchor="w", pady=(4, 0))
+        ttk.Label(frm, text=tr["app_title"], font=("Segoe UI", 12, "bold")).pack(anchor="w")
+        ttk.Label(frm, text=tr["dev_by"], foreground="#555").pack(anchor="w", pady=(4, 0))
         ttk.Separator(frm).pack(fill=tk.X, pady=10)
 
-            "Bu yazılım olduğu gibi sunulur; veri kaybı vb. durumlarda sorumluluk kabul edilmez."
-        )
-        msg = ttk.Label(frm, text=TRANSLATIONS[self.current_lang]["about_text"], justify="left", wraplength=460)
+        msg = ttk.Label(frm, text=tr["about_text"], justify="left", wraplength=460)
         msg.pack(anchor="w")
 
         btns = ttk.Frame(frm)
         btns.pack(fill=tk.X, pady=(12, 0))
-        ttk.Button(btns, text=TRANSLATIONS[self.current_lang]["close"], command=w.destroy).pack(side=tk.RIGHT)
+        ttk.Button(btns, text=tr["close"], command=w.destroy).pack(side=tk.RIGHT)
 
         def _finalize_position() -> None:
             try:
@@ -512,7 +520,7 @@ class App(_BaseWindow):
         else:
             self.btn_generate = ttk.Button(actions, text="PDF OLUŞTUR", command=self.generate)
             self.btn_generate.grid(row=0, column=0, sticky="we", padx=(0, 8), ipady=8)
-            self.btn_generate_list_pdf = ttk.Button(actions, text="Önizlemeyi Yenile", command=self._refresh_labels)
+            self.btn_generate_list_pdf = ttk.Button(actions, text="PDF Liste Olarak Kaydet", command=self.generate_list_pdf)
             self.btn_generate_list_pdf.grid(row=0, column=1, sticky="we", ipady=8)
 
         self.lbl_status = ttk.Label(box, text="0 kayıt", foreground="#666")
@@ -831,18 +839,6 @@ class App(_BaseWindow):
             w = float(self.width_mm.get().strip())
             h = float(self.height_mm.get().strip())
         except ValueError:
-            messagebox.showerror("Hata", "Etiket ölçüsü sayı olmalı")
-            return
-
-        logo = self.logo_path.get().strip() or None
-        try:
-            logo_scale = float((self.logo_scale.get().strip() or "22")) / 100.0
-        except ValueError:
-            logo_scale = 0.20
-
-        try:
-            self._refresh_labels()
-            labels = self._labels
             messagebox.showerror(TRANSLATIONS[self.current_lang]["error"], TRANSLATIONS[self.current_lang]["label_size_numeric_error"])
             return
 
