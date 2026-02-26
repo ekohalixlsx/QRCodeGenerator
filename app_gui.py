@@ -1,6 +1,5 @@
 import json
 import os
-import subprocess
 import sys
 import tkinter as tk
 from tkinter import filedialog, messagebox
@@ -157,6 +156,7 @@ class App(_BaseWindow):
         self.list_cols = tk.StringVar(value="5")
         self.list_rows = tk.StringVar(value="12")
         self.current_lang = self._read_lang()
+        self._lang_switch_job: str | None = None
 
         self._labels: list[LabelRow] = []
         self._preview_imgs: list[ImageTk.PhotoImage] = []
@@ -338,38 +338,44 @@ class App(_BaseWindow):
             pass
 
     def _toggle_lang(self) -> None:
-        # Yeni dili belirle ve kaydet
-        new_lang = "en" if self.current_lang == "tr" else "tr"
-        self._save_lang(new_lang)
-        
-        # Uygulamayı yeniden başlat
+        if self._lang_switch_job is not None:
+            try:
+                self.after_cancel(self._lang_switch_job)
+            except Exception:
+                pass
+            self._lang_switch_job = None
+
+        self.current_lang = "en" if self.current_lang == "tr" else "tr"
+        self._save_lang(self.current_lang)
+
+        current_geometry = self.geometry()
         try:
-            if getattr(sys, 'frozen', False):
-                # PyInstaller ile paketlenmiş EXE — bağımsız süreç olarak başlat
-                subprocess.Popen(
-                    [sys.executable],
-                    creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
-                )
-            else:
-                # Python script olarak çalışıyorsa
-                subprocess.Popen(
-                    [sys.executable] + sys.argv,
-                    creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
-                )
-        except Exception:
-            # Restart başarısız olursa, en azından metinleri güncelle
-            self.current_lang = new_lang
-            self._update_all_texts()
-            self.update_idletasks()
-            self._render_preview()
-            return
-        
-        # Mevcut uygulamayı zorla kapat (SystemExit istisnası olmadan)
-        try:
-            self.destroy()
+            self.withdraw()
         except Exception:
             pass
-        os._exit(0)
+
+        def _finish_lang_switch() -> None:
+            self._lang_switch_job = None
+            try:
+                if not self.winfo_exists():
+                    return
+                self._update_all_texts()
+                self.update_idletasks()
+                self._render_preview()
+                self.geometry(current_geometry)
+                self.deiconify()
+                self.lift()
+                self.focus_force()
+            except Exception:
+                try:
+                    self.deiconify()
+                except Exception:
+                    pass
+
+        try:
+            self._lang_switch_job = self.after(1000, _finish_lang_switch)
+        except Exception:
+            _finish_lang_switch()
 
     def _center_window(self, child: tk.Toplevel) -> None:
         try:
