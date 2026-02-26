@@ -252,16 +252,29 @@ def _wrap_text(canvas: Canvas, text: str, x: float, y: float, max_width: float, 
     if line:
         lines.append(line)
 
+    # Her satırı max_width'e göre kesin olarak sınırla (truncate)
+    final_lines = []
+    for ln in lines[:max_lines if max_lines > 0 else len(lines)]:
+        if canvas.stringWidth(ln) > max_width:
+            # Tek bir kelime veya dizi çok uzunsa kes
+            t = ln
+            suffix = "..."
+            while t and canvas.stringWidth(t + suffix) > max_width:
+                t = t[:-1]
+            final_lines.append(t + suffix)
+        else:
+            final_lines.append(ln)
+    
+    # Eğer orijinal satır sayısı sınırı aşıyorsa son satıra ... ekle (eğer zaten yoksa)
     if max_lines > 0 and len(lines) > max_lines:
-        lines = lines[:max_lines]
-        # Taşan kelime varsa son satırı kesip ... ekle (basit mantık: her zaman ekle eğer kesildiyse)
-        last = lines[-1]
-        suffix = "..."
-        while last and canvas.stringWidth(last + suffix) > max_width:
-            last = last[:-1]
-        lines[-1] = last + suffix
+        if not final_lines[-1].endswith("..."):
+            t = final_lines[-1]
+            suffix = "..."
+            while t and canvas.stringWidth(t + suffix) > max_width:
+                t = t[:-1]
+            final_lines[-1] = t + suffix
 
-    for ln in lines:
+    for ln in final_lines:
         canvas.drawString(x, y, ln)
         y -= line_height
     return y

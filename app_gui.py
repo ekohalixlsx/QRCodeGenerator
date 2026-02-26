@@ -718,22 +718,19 @@ class App(_BaseWindow):
             if current and len(lines_out) < max_lines:
                 _push_line(current)
 
-            overflow = False
-            if len(lines_out) > max_lines:
-                lines_out = lines_out[:max_lines]
-                overflow = True
-            elif len(lines_out) == max_lines:
-                # If there are still words left unrendered, mark overflow.
-                rendered = " ".join(lines_out).split()
-                overflow = len(rendered) < len(words)
-
-            if overflow and lines_out:
-                lines_out[-1] = _truncate_to_width(draw, lines_out[-1], font, max_w)
+            overflow = len(lines_out) > max_lines or (len(lines_out) == max_lines and len(" ".join(lines_out).split()) < len(words))
+            
+            final_lines = []
+            display_lines = lines_out[:max_lines]
+            for i, ln in enumerate(display_lines):
+                is_last = (i == len(display_lines) - 1)
+                if draw.textlength(ln, font=font) > max_w or (is_last and overflow):
+                    final_lines.append(_truncate_to_width(draw, ln, font, max_w))
+                else:
+                    final_lines.append(ln)
 
             y = y0
-            for i, line in enumerate(lines_out[:max_lines]):
-                if i == max_lines - 1 and overflow:
-                    line = _truncate_to_width(draw, line, font, max_w)
+            for line in final_lines:
                 draw.text((x, y), line, fill=(0, 0, 0), font=font)
                 y += line_gap
             return y
