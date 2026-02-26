@@ -345,19 +345,31 @@ class App(_BaseWindow):
         # Uygulamayı yeniden başlat
         try:
             if getattr(sys, 'frozen', False):
-                # PyInstaller ile paketlenmiş EXE
-                subprocess.Popen([sys.executable])
+                # PyInstaller ile paketlenmiş EXE — bağımsız süreç olarak başlat
+                subprocess.Popen(
+                    [sys.executable],
+                    creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+                )
             else:
                 # Python script olarak çalışıyorsa
-                subprocess.Popen([sys.executable] + sys.argv)
-            self.destroy()
-            sys.exit(0)
+                subprocess.Popen(
+                    [sys.executable] + sys.argv,
+                    creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+                )
         except Exception:
             # Restart başarısız olursa, en azından metinleri güncelle
             self.current_lang = new_lang
             self._update_all_texts()
             self.update_idletasks()
             self._render_preview()
+            return
+        
+        # Mevcut uygulamayı zorla kapat (SystemExit istisnası olmadan)
+        try:
+            self.destroy()
+        except Exception:
+            pass
+        os._exit(0)
 
     def _center_window(self, child: tk.Toplevel) -> None:
         try:
