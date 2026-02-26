@@ -303,9 +303,20 @@ class App(_BaseWindow):
         self.btn_lang.config(text=tr["lang_btn"])
 
     def _toggle_lang(self) -> None:
+        try:
+            self.withdraw() # Pencereyi anlık gizle
+        except Exception:
+            pass
+            
         self.current_lang = "en" if self.current_lang == "tr" else "tr"
         self._update_all_texts()
         self._render_preview()
+        
+        try:
+            self.update_idletasks() # Layout'un oturmasını bekle
+            self.deiconify() # Tekrar göster
+        except Exception:
+            pass
 
     def _center_window(self, child: tk.Toplevel) -> None:
         try:
