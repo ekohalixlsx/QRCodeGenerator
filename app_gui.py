@@ -1,4 +1,6 @@
+import json
 import os
+import subprocess
 import sys
 import tkinter as tk
 from tkinter import filedialog, messagebox
@@ -154,7 +156,7 @@ class App(_BaseWindow):
         self.logo_scale = tk.StringVar(value="20")
         self.list_cols = tk.StringVar(value="5")
         self.list_rows = tk.StringVar(value="12")
-        self.current_lang = "tr"
+        self.current_lang = self._read_lang()
 
         self._labels: list[LabelRow] = []
         self._preview_imgs: list[ImageTk.PhotoImage] = []
@@ -302,18 +304,60 @@ class App(_BaseWindow):
         self.box_preview.config(text=tr["preview_title"])
         self.btn_lang.config(text=tr["lang_btn"])
 
+    @staticmethod
+    def _lang_config_path() -> str:
+        """lang.cfg dosyasının konumunu döndürür (exe veya script'in yanı)."""
+        if getattr(sys, 'frozen', False):
+            base = os.path.dirname(sys.executable)
+        else:
+            base = os.path.dirname(os.path.abspath(__file__))
+        return os.path.join(base, 'lang.cfg')
+
+    @classmethod
+    def _read_lang(cls) -> str:
+        """Kaydedilmiş dil tercihini oku, yoksa 'tr' döndür."""
+        try:
+            cfg = cls._lang_config_path()
+            if os.path.exists(cfg):
+                with open(cfg, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    lang = data.get('lang', 'tr')
+                    return lang if lang in ('tr', 'en') else 'tr'
+        except Exception:
+            pass
+        return 'tr'
+
+    @classmethod
+    def _save_lang(cls, lang: str) -> None:
+        """Dil tercihini dosyaya kaydet."""
+        try:
+            cfg = cls._lang_config_path()
+            with open(cfg, 'w', encoding='utf-8') as f:
+                json.dump({'lang': lang}, f)
+        except Exception:
+            pass
+
     def _toggle_lang(self) -> None:
-        # Dil bilgisini değiştir
-        self.current_lang = "en" if self.current_lang == "tr" else "tr"
+        # Yeni dili belirle ve kaydet
+        new_lang = "en" if self.current_lang == "tr" else "tr"
+        self._save_lang(new_lang)
         
-        # Tüm metinleri güncelle
-        self._update_all_texts()
-        
-        # Layout'u sabitlemek için update
-        self.update_idletasks()
-        
-        # Önizlemeyi tazele
-        self._render_preview()
+        # Uygulamayı yeniden başlat
+        try:
+            if getattr(sys, 'frozen', False):
+                # PyInstaller ile paketlenmiş EXE
+                subprocess.Popen([sys.executable])
+            else:
+                # Python script olarak çalışıyorsa
+                subprocess.Popen([sys.executable] + sys.argv)
+            self.destroy()
+            sys.exit(0)
+        except Exception:
+            # Restart başarısız olursa, en azından metinleri güncelle
+            self.current_lang = new_lang
+            self._update_all_texts()
+            self.update_idletasks()
+            self._render_preview()
 
     def _center_window(self, child: tk.Toplevel) -> None:
         try:
