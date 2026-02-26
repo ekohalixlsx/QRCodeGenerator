@@ -233,46 +233,78 @@ def _make_qr_image_with_logo(
     return img
 
 
-def _wrap_text(canvas: Canvas, text: str, x: float, y: float, max_width: float, line_height: float, max_lines: int = 0) -> float:
-    words = (text or "").split()
-    if not words:
+def _wrap_text(canvas: Canvas, text: str, x: float, y: float, max_width: float, line_height: float, max_lines: int = 4) -> float:
+    s = (text or "").strip()
+    if not s:
         return y
-    lines = []
-    line = ""
-    for w in words:
-        candidate = (line + " " + w).strip()
-        if canvas.stringWidth(candidate) <= max_width:
-            line = candidate
-        else:
-            if line: lines.append(line)
-            line = w
-            if max_lines > 0 and len(lines) >= max_lines:
-                line = ""
-                break
-    if line:
-        lines.append(line)
-
-    # Her satırı max_width'e göre kesin olarak sınırla (truncate)
-    final_lines = []
-    for ln in lines[:max_lines if max_lines > 0 else len(lines)]:
-        if canvas.stringWidth(ln) > max_width:
-            # Tek bir kelime veya dizi çok uzunsa kes
-            t = ln
-            suffix = "..."
-            while t and canvas.stringWidth(t + suffix) > max_width:
-                t = t[:-1]
-            final_lines.append(t + suffix)
-        else:
-            final_lines.append(ln)
     
-    # Eğer orijinal satır sayısı sınırı aşıyorsa son satıra ... ekle (eğer zaten yoksa)
-    if max_lines > 0 and len(lines) > max_lines:
-        if not final_lines[-1].endswith("..."):
-            t = final_lines[-1]
+    lines = []
+    current_line = ""
+    
+    # Kelime kelime değil, karakter karakter veya kelime kelime hibrit bir mantık kuralım.
+    # Önce boşluklara göre bölelim ama çok uzun kelimeleri de karakter karakter bölelim.
+    words = s.split()
+    for w in words:
+        # Eğer kelime tek başına satıra sığıyorsa veya eklenince sığıyorsa
+        cand = (current_line + " " + w).strip()
+        if canvas.stringWidth(cand) <= max_width:
+            current_line = cand
+        else:
+            # Sığmıyorsa, current_line'ı ekle (varsa) ve kelimeyi bölmeye çalış
+            if current_line:
+                lines.append(current_line)
+                current_line = ""
+            
+            # Kelimeyi karakter karakter bölelim
+            while w:
+                temp_w = ""
+                idx = 0
+                while idx < len(w) and canvas.stringWidth(temp_w + w[idx]) <= max_width:
+                    temp_w += w[idx]
+                    idx += 1
+                
+                if temp_w:
+                    lines.append(temp_w)
+                    w = w[idx:]
+                else:
+                    # Tek bir karakter bile sığmıyor (çok dar alan), zorla bir karakter al
+                    lines.append(w[0])
+                    w = w[1:]
+                
+                # Eğer satır limitine ulaştıysak ve hala metin varsa döngüden çıkabiliriz
+                if max_lines > 0 and len(lines) >= max_lines:
+                    # Kalan metni w olarak bırakalım kalsın
+                    break
+            
+            # Kelimenin kalan kısmı varsa current_line olarak devam et (eğer limit aşılmadıysa)
+            if w and (max_lines <= 0 or len(lines) < max_lines):
+                current_line = w
+            elif w: # Limit aşılmış ve metin kalmış
+                break
+
+    if current_line and (max_lines <= 0 or len(lines) < max_lines):
+        lines.append(current_line)
+
+    # 4 satır limiti ve ... kontrolü
+    final_lines = lines
+    has_more = False
+    if max_lines > 0 and len(lines) >= max_lines:
+        # Gerçekten daha fazla metin var mı kontrolü (split sonrası w kontrolü veya lines uzunluğu)
+        # Basitçe: Eğer lines sayısı max_lines ise ve hala eklenmemiş metin varsa has_more = True
+        # Bu implementasyonda son satırın sonuna ... ekleyelim eğer metin kesildiyse.
+        # (Yukarıdaki mantıkta metin kalırsa has_more durumu oluşur)
+        # Şimdilik basitleştirelim: Eğer metin split ile gelen tüm kelimeleri içermiyorsa ...
+        rendered_text = " ".join(lines)
+        if len(rendered_text.replace(" ", "")) < len(s.replace(" ", "")):
+            has_more = True
+        
+        final_lines = lines[:max_lines]
+        if has_more:
+            last = final_lines[-1]
             suffix = "..."
-            while t and canvas.stringWidth(t + suffix) > max_width:
-                t = t[:-1]
-            final_lines[-1] = t + suffix
+            while last and canvas.stringWidth(last + suffix) > max_width:
+                last = last[:-1]
+            final_lines[-1] = last + suffix
 
     for ln in final_lines:
         canvas.drawString(x, y, ln)

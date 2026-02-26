@@ -690,48 +690,56 @@ class App(_BaseWindow):
             s = (text or "").strip()
             if not s or max_lines <= 0:
                 return y0
-            words = s.split()
-            if not words:
-                return y0
-
-            lines_out: list[str] = []
+            
+            lines = []
             current = ""
-
-            def _push_line(line: str) -> None:
-                if line.strip():
-                    lines_out.append(line.strip())
-
+            words = s.split()
+            
             for w in words:
                 cand = (current + " " + w).strip()
-                if not current:
-                    current = w
-                    continue
                 if draw.textlength(cand, font=font) <= max_w:
                     current = cand
                 else:
-                    _push_line(current)
-                    current = w
-                    if len(lines_out) >= max_lines:
+                    if current:
+                        lines.append(current)
                         current = ""
-                        break
+                    
+                    # Bölme işlemi
+                    while w:
+                        temp = ""
+                        idx = 0
+                        while idx < len(w) and draw.textlength(temp + w[idx], font=font) <= max_w:
+                            temp += w[idx]
+                            idx += 1
+                        
+                        if temp:
+                            lines.append(temp)
+                            w = w[idx:]
+                        else:
+                            lines.append(w[0])
+                            w = w[1:]
+                        if len(lines) >= max_lines: break
+                    
+                    if w and len(lines) < max_lines:
+                        current = w
+                    elif w: break
 
-            if current and len(lines_out) < max_lines:
-                _push_line(current)
+            if current and len(lines) < max_lines:
+                lines.append(current)
 
-            overflow = len(lines_out) > max_lines or (len(lines_out) == max_lines and len(" ".join(lines_out).split()) < len(words))
+            has_more = len(" ".join(lines).replace(" ", "")) < len(s.replace(" ", ""))
+            display_lines = lines[:max_lines]
             
-            final_lines = []
-            display_lines = lines_out[:max_lines]
-            for i, ln in enumerate(display_lines):
-                is_last = (i == len(display_lines) - 1)
-                if draw.textlength(ln, font=font) > max_w or (is_last and overflow):
-                    final_lines.append(_truncate_to_width(draw, ln, font, max_w))
-                else:
-                    final_lines.append(ln)
+            if has_more and display_lines:
+                last = display_lines[-1]
+                suffix = "..."
+                while last and draw.textlength(last + suffix, font=font) > max_w:
+                    last = last[:-1]
+                display_lines[-1] = last + suffix
 
             y = y0
-            for line in final_lines:
-                draw.text((x, y), line, fill=(0, 0, 0), font=font)
+            for ln in display_lines:
+                draw.text((x, y), ln, fill=(0, 0, 0), font=font)
                 y += line_gap
             return y
 
